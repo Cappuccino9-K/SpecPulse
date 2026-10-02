@@ -27,12 +27,14 @@ async def get_cached(url: str, provider: Provider) -> HardwareAnalysisResult | N
     if cached and cached[0] > now:
         return _hydrate(cached[1])
     try:
-        async with SessionLocal() as session:
-            row = await session.get(ExtractionCacheRow, key)
+        with SessionLocal() as session:
+            row = session.get(ExtractionCacheRow, key)
             if row is None or row.expires_at <= now:
                 return None
-            _memory[key] = (row.expires_at, row.payload)
-            return _hydrate(row.payload)
+            payload = dict(row.payload)
+            expires_at = row.expires_at
+        _memory[key] = (expires_at, payload)
+        return _hydrate(payload)
     except SQLAlchemyError:
         logger.exception("failed to read extraction cache")
         return None
@@ -46,8 +48,8 @@ async def put_cached(url: str, provider: Provider, result: HardwareAnalysisResul
     payload["cached"] = False
     _memory[key] = (expires, payload)
     try:
-        async with SessionLocal() as session:
-            row = await session.get(ExtractionCacheRow, key)
+        with SessionLocal() as session:
+            row = session.get(ExtractionCacheRow, key)
             if row is None:
                 row = ExtractionCacheRow(
                     cache_key=key,
@@ -62,7 +64,7 @@ async def put_cached(url: str, provider: Provider, result: HardwareAnalysisResul
                 row.payload = payload
                 row.fetched_at = now
                 row.expires_at = expires
-            await session.commit()
+            session.commit()
     except SQLAlchemyError:
         logger.exception("failed to write extraction cache")
 

@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.api.endpoints import router
 from app.config import get_settings
-from app.database import engine, init_db
+from app.database import init_db, shutdown_db
 from app.services.fixtures import load_fixture
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await init_db()
+    init_db()
     logger.info("database ready")
     yield
-    await engine.dispose()
+    shutdown_db()
 
 
 settings = get_settings()

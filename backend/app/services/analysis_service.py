@@ -80,37 +80,37 @@ async def compare_products(urls: list[str], provider: Provider) -> CompareRespon
 
 async def list_history(limit: int = 20) -> list[HistoryItem]:
     try:
-        async with SessionLocal() as session:
+        with SessionLocal() as session:
             stmt = select(ComparisonRow).order_by(ComparisonRow.created_at.desc()).limit(limit)
-            rows = (await session.scalars(stmt)).all()
+            rows = session.scalars(stmt).all()
+            return [
+                HistoryItem(
+                    id=row.id,
+                    title=row.title,
+                    urls=list(row.urls),
+                    provider=row.provider,  # type: ignore[arg-type]
+                    created_at=row.created_at,
+                )
+                for row in rows
+            ]
     except SQLAlchemyError as exc:
         logger.exception("history list failed")
         raise AnalysisError("비교 기록을 읽지 못했습니다.", 503) from exc
-    return [
-        HistoryItem(
-            id=row.id,
-            title=row.title,
-            urls=list(row.urls),
-            provider=row.provider,  # type: ignore[arg-type]
-            created_at=row.created_at,
-        )
-        for row in rows
-    ]
 
 
 async def get_history(comparison_id: uuid.UUID) -> CompareResponse:
-    row = await _get_row(comparison_id)
-    return CompareResponse.model_validate(row.payload)
+    payload = _load_history_payload(comparison_id)
+    return CompareResponse.model_validate(payload)
 
 
 async def delete_history(comparison_id: uuid.UUID) -> None:
     try:
-        async with SessionLocal() as session:
-            row = await session.get(ComparisonRow, comparison_id)
+        with SessionLocal() as session:
+            row = session.get(ComparisonRow, comparison_id)
             if row is None:
                 raise AnalysisError("비교 기록을 찾지 못했습니다.", 404)
-            await session.delete(row)
-            await session.commit()
+            session.delete(row)
+            session.commit()
     except AnalysisError:
         raise
     except SQLAlchemyError as exc:
@@ -154,7 +154,7 @@ async def _save_comparison(urls: list[str], response: CompareResponse) -> Compar
     created = response.created_at or datetime.now(timezone.utc)
     stored = response.model_copy(update={"id": row_id, "created_at": created})
     try:
-        async with SessionLocal() as session:
+        with SessionLocal() as session:
             session.add(
                 ComparisonRow(
                     id=row_id,
@@ -165,20 +165,22 @@ async def _save_comparison(urls: list[str], response: CompareResponse) -> Compar
                     created_at=created,
                 )
             )
-            await session.commit()
+            session.commit()
     except SQLAlchemyError:
         logger.exception("failed to save comparison")
         return response
     return stored
 
 
-async def _get_row(comparison_id: uuid.UUID) -> ComparisonRow:
+def _load_history_payload(comparison_id: uuid.UUID) -> dict:
     try:
-        async with SessionLocal() as session:
-            row = await session.get(ComparisonRow, comparison_id)
+        with SessionLocal() as session:
+            row = session.get(ComparisonRow, comparison_id)
+            if row is None:
+                raise AnalysisError("비교 기록을 찾지 못했습니다.", 404)
+            return dict(row.payload)
+    except AnalysisError:
+        raise
     except SQLAlchemyError as exc:
         logger.exception("history read failed")
         raise AnalysisError("비교 기록을 읽지 못했습니다.", 503) from exc
-    if row is None:
-        raise AnalysisError("비교 기록을 찾지 못했습니다.", 404)
-    return row

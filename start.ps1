@@ -4,7 +4,16 @@ Set-Location $Root
 
 function Stop-Tree([System.Diagnostics.Process] $Process) {
   if (-not $Process -or $Process.HasExited) { return }
-  & taskkill.exe /PID $Process.Id /T /F 2>$null | Out-Null
+  $taskkill = Join-Path $env:SystemRoot "System32\taskkill.exe"
+  if (-not (Test-Path $taskkill)) { return }
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    & $taskkill /PID $Process.Id /T /F 2>$null | Out-Null
+  } catch {
+  } finally {
+    $ErrorActionPreference = $previous
+  }
 }
 
 function Find-Psql {
