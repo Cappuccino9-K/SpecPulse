@@ -1,0 +1,223 @@
+import re
+from bs4 import BeautifulSoup, Tag
+
+from app.schemas import HardwareAnalysisResult, ProductSpec, ReviewSummary
+
+NOISE_TAGS = ["nav", "footer", "script", "style", "noscript", "iframe", "svg", "form"]
+NOISE_HINTS = ("ad", "ads", "banner", "cookie", "popup", "newsletter", "sponsor")
+
+SPEC_ALIASES: list[tuple[str, tuple[str, ...]]] = [
+    ("cpu", ("cpu", "프로세서", "processor", "칩셋")),
+    ("gpu", ("gpu", "그래픽", "graphics", "그래픽카드")),
+    ("ram", ("ram", "메모리", "memory", "unified")),
+    ("storage", ("storage", "저장공간", "저장장치", "ssd", "저장")),
+    ("display", ("display", "디스플레이", "화면", "해상도", "패널")),
+    ("battery", ("battery", "배터리", "사용시간")),
+    ("weight", ("weight", "무게", "중량")),
+    ("power", ("전력", "tdp", "tgp", "tbp", "소비전력")),
+    ("extras", ("기타", "포트", "단자", "특징", "extras")),
+]
+
+BRANDS = [
+    ("Apple", ("apple", "맥북", "macbook", "ipad", "아이패드")),
+    ("Samsung", ("samsung", "삼성", "galaxy", "갤럭시")),
+    ("NVIDIA", ("nvidia", "지포스", "geforce", "rtx")),
+    ("AMD", ("amd", "radeon", "라데온", "rx ")),
+    ("LG", ("lg ", "lg전자")),
+    ("ASUS", ("asus", "에이수스")),
+    ("Lenovo", ("lenovo", "레노버")),
+]
+
+POSITIVE_WORDS = ("좋", "만족", "훌륭", "추천", "조용", "선명", "가볍", "빠르", "오래", "괜찮", "편리", "여유")
+NEGATIVE_WORDS = ("아쉽", "부족", "발열", "무겁", "비싸", "느리", "버벅", "시끄", "단점", "별로", "피로", "빠듯")
+
+
+def parse_hardware(html: str, url: str) -> HardwareAnalysisResult:
+    soup = BeautifulSoup(html, "html.parser")
+    strip_noise(soup)
+    name = _name(soup)
+    brand = _brand(soup, name)
+    category = _category(soup, name)
+    price = _price(soup)
+    specs = _specs(soup)
+    pros = _items(soup, "ul.pros li")
+    cons = _items(soup, "ul.cons li")
+    recommended = _items(soup, "ul.recommend li")
+    reviews = [node.get_text(" ", strip=True) for node in soup.select(".review")]
+    reviews = [text for text in reviews if text]
+    summary_node = soup.select_one("p.summary")
+    if summary_node:
+        overall = summary_node.get_text(" ", strip=True)
+    else:
+        overall = _overall(name, pros, cons, reviews)
+    if not pros:
+        pros = _mine(reviews, positive=True)
+    if not cons:
+        cons = _mine(reviews, positive=False)
+    if not name and not specs:
+        raise ValueError("페이지에서 제품 스펙을 찾지 못했습니다.")
+    return HardwareAnalysisResult(
+        spec=ProductSpec(
+            name=name or "이름 없는 제품",
+            brand=brand,
+            category=category,
+            specs=specs,
+            price=price,
+            url=url,
+        ),
+        reviews=ReviewSummary(
+            overall=overall,
+            pros=pros,
+            cons=cons,
+            recommended_for=recommended,
+            sentiment_score=_sentiment(pros, cons, reviews),
+        ),
+        source="local",
+        extractor="parser",
+    )
+
+
+def strip_noise(soup: BeautifulSoup) -> None:
+    for tag in soup.find_all(NOISE_TAGS):
+        tag.decompose()
+    for node in list(soup.find_all(True)):
+        if not isinstance(node, Tag) or not node.attrs:
+            continue
+        identity = " ".join(
+            [str(node.get("id") or ""), " ".join(node.get("class") or [])]
+        ).lower()
+        if any(hint in identity for hint in NOISE_HINTS):
+            node.decompose()
+
+
+def html_to_markdown(html: str) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    strip_noise(soup)
+    lines: list[str] = []
+    for node in soup.find_all(["h1", "h2", "h3", "p", "li", "tr"]):
+        text = node.get_text(" ", strip=True)
+        if not text:
+            continue
+        if node.name == "h1":
+            lines.append(f"# {text}")
+        elif node.name == "h2":
+            lines.append(f"## {text}")
+        elif node.name == "h3":
+            lines.append(f"### {text}")
+        elif node.name == "tr":
+            cells = [cell.get_text(" ", strip=True) for cell in node.find_all(["th", "td"])]
+            if any(cells):
+                lines.append("| " + " | ".join(cells) + " |")
+        elif node.name == "li":
+            lines.append(f"- {text}")
+        else:
+            lines.append(text)
+    return "\n".join(lines)
+
+
+def _name(soup: BeautifulSoup) -> str:
+    heading = soup.find("h1")
+    if heading:
+        return heading.get_text(" ", strip=True)
+    if soup.title and soup.title.string:
+        return soup.title.string.split("·")[0].strip()
+    return ""
+
+
+def _brand(soup: BeautifulSoup, name: str) -> str:
+    meta = soup.find("meta", attrs={"name": "brand"})
+    if meta and meta.get("content"):
+        return str(meta["content"]).strip()
+    haystack = name.lower()
+    for label, tokens in BRANDS:
+        if any(token in haystack for token in tokens):
+            return label
+    return "알 수 없음"
+
+
+def _category(soup: BeautifulSoup, name: str) -> str:
+    meta = soup.find("meta", attrs={"name": "category"})
+    if meta and meta.get("content"):
+        return str(meta["content"]).strip()
+    haystack = f"{name} {soup.get_text(' ', strip=True)[:400]}".lower()
+    if any(token in haystack for token in ("그래픽카드", "geforce", "radeon", "rtx", "gpu")):
+        return "그래픽카드"
+    if any(token in haystack for token in ("태블릿", "ipad", "아이패드", "galaxy tab")):
+        return "태블릿"
+    if any(token in haystack for token in ("노트북", "macbook", "laptop", "그램")):
+        return "노트북"
+    return "전자제품"
+
+
+def _price(soup: BeautifulSoup) -> str | None:
+    node = soup.select_one(".price")
+    text = node.get_text(" ", strip=True) if node else soup.get_text(" ", strip=True)[:1500]
+    match = re.search(r"(?:₩\s*)?(\d{1,3}(?:,\d{3})+|\d{4,})\s*원", text)
+    if match:
+        return f"{match.group(1)}원"
+    dollar = re.search(r"\$\s*(\d{1,3}(?:,\d{3})+|\d+)", text)
+    if dollar:
+        return f"${dollar.group(1)}"
+    return None
+
+
+def _specs(soup: BeautifulSoup) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for row in soup.find_all("tr"):
+        cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"])]
+        cells = [cell for cell in cells if cell]
+        if len(cells) < 2:
+            continue
+        key = _canonical(cells[0])
+        if key and key not in found and cells[0] not in {"항목", "스펙"}:
+            found[key] = cells[1]
+    for term in soup.find_all("dt"):
+        value_node = term.find_next_sibling("dd")
+        if value_node is None:
+            continue
+        key = _canonical(term.get_text(" ", strip=True))
+        if key and key not in found:
+            found[key] = value_node.get_text(" ", strip=True)
+    return found
+
+
+def _canonical(label: str) -> str | None:
+    lowered = label.lower().strip()
+    if lowered in {"항목", "스펙", "spec", "specification"}:
+        return None
+    for key, aliases in SPEC_ALIASES:
+        if any(alias in lowered for alias in aliases):
+            return key
+    return None
+
+
+def _items(soup: BeautifulSoup, selector: str) -> list[str]:
+    return [node.get_text(" ", strip=True) for node in soup.select(selector) if node.get_text(strip=True)][:3]
+
+
+def _mine(reviews: list[str], positive: bool) -> list[str]:
+    words = POSITIVE_WORDS if positive else NEGATIVE_WORDS
+    picked = [text for text in reviews if any(word in text for word in words)]
+    return picked[:3]
+
+
+def _overall(name: str, pros: list[str], cons: list[str], reviews: list[str]) -> str:
+    if reviews:
+        lead = reviews[0]
+    elif pros:
+        lead = pros[0]
+    else:
+        lead = "스펙 표 중심으로 정리했습니다."
+    weakness = cons[0] if cons else "반복해서 지적된 단점은 많지 않습니다."
+    return f"{name} 리뷰에서는 {lead} 반면 {weakness}"
+
+
+def _sentiment(pros: list[str], cons: list[str], reviews: list[str]) -> float:
+    base = 62 + (len(pros) - len(cons)) * 4
+    text = " ".join(reviews)
+    positive_hits = sum(text.count(word) for word in POSITIVE_WORDS)
+    negative_hits = sum(text.count(word) for word in NEGATIVE_WORDS)
+    tilt = 0.0
+    if positive_hits + negative_hits:
+        tilt = (positive_hits - negative_hits) / (positive_hits + negative_hits) * 18
+    return round(min(96, max(8, base + tilt)), 1)
