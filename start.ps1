@@ -9,21 +9,28 @@ function Stop-Tree([System.Diagnostics.Process] $Process) {
 
 Write-Host "SpecPulse를 루트에서 시작합니다."
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-  throw "Docker Desktop이 없습니다. 설치한 뒤 앱을 켜 두고 다시 실행하세요. https://www.docker.com/products/docker-desktop/"
+$useSqlite = $true
+if (Get-Command docker -ErrorAction SilentlyContinue) {
+  docker info 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "PostgreSQL을 띄웁니다."
+    docker compose up -d
+    if ($LASTEXITCODE -eq 0) {
+      for ($i = 0; $i -lt 30; $i++) {
+        docker compose exec -T db pg_isready -U specpulse -d specpulse 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $useSqlite = $false; break }
+        Start-Sleep -Seconds 1
+      }
+    }
+  }
 }
 
-Write-Host "PostgreSQL을 띄웁니다."
-docker compose up -d
-if ($LASTEXITCODE -ne 0) { throw "docker compose에 실패했습니다. Docker Desktop이 실행 중인지 확인하세요." }
-
-$ready = $false
-for ($i = 0; $i -lt 30; $i++) {
-  docker compose exec -T db pg_isready -U specpulse -d specpulse 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) { $ready = $true; break }
-  Start-Sleep -Seconds 1
+if ($useSqlite) {
+  Write-Host "Docker 가상화를 쓸 수 없어 파일 데이터베이스로 실행합니다. BIOS 설정 없이도 동작합니다."
+  $env:DATABASE_URL = "sqlite+aiosqlite:///./specpulse.db"
+} else {
+  $env:DATABASE_URL = "postgresql+asyncpg://specpulse:specpulse@127.0.0.1:5432/specpulse"
 }
-if (-not $ready) { throw "PostgreSQL이 준비되지 않았습니다." }
 
 $python = $null
 $pythonArgs = @()

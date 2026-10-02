@@ -4,9 +4,9 @@ pydantic==2.10.4
 pydantic-settings==2.7.1
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
+aiosqlite==0.20.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 pytest==8.3.4
 pytest-asyncio==0.25.2
-crawl4ai==0.6.3
