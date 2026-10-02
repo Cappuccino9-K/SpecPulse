@@ -231,15 +231,41 @@ if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
   Pop-Location
 }
 
+$node = $null
+if (Get-Command node.exe -ErrorAction SilentlyContinue) {
+  $node = (Get-Command node.exe).Source
+} elseif (Get-Command node -ErrorAction SilentlyContinue) {
+  $node = (Get-Command node).Source
+} else {
+  throw "Node.js가 필요합니다. https://nodejs.org 에서 LTS를 설치하세요."
+}
+$nextBin = Join-Path $Root "frontend\node_modules\next\dist\bin\next"
+if (-not (Test-Path $nextBin)) {
+  throw "프론트엔드 실행 파일을 찾지 못했습니다. frontend 폴더에서 npm install을 확인해 주세요."
+}
+
 Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:8765  화면 http://127.0.0.1:43721"
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
 $backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru
-$frontend = Start-Process -FilePath $npm -ArgumentList @("run", "dev") -WorkingDirectory (Join-Path $Root "frontend") -NoNewWindow -PassThru
+$frontend = Start-Process -FilePath $node -ArgumentList @($nextBin, "dev", "-H", "0.0.0.0", "-p", "43721") -WorkingDirectory (Join-Path $Root "frontend") -NoNewWindow -PassThru
+
+function Test-Running([System.Diagnostics.Process] $Process) {
+  if (-not $Process) { return $false }
+  try { $Process.Refresh() } catch { return $false }
+  if (-not $Process.HasExited) { return $true }
+  return $null -ne (Get-Process -Id $Process.Id -ErrorAction SilentlyContinue)
+}
 
 try {
-  while (-not $backend.HasExited -and -not $frontend.HasExited) {
+  while ((Test-Running $backend) -and (Test-Running $frontend)) {
     Start-Sleep -Seconds 1
+  }
+  if (-not (Test-Running $backend)) {
+    Write-Host "API 프로세스가 종료되었습니다. 코드 $($backend.ExitCode)"
+  }
+  if (-not (Test-Running $frontend)) {
+    Write-Host "화면 프로세스가 종료되었습니다. 코드 $($frontend.ExitCode)"
   }
 } finally {
   Stop-Tree $backend
