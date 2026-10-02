@@ -1,3 +1,4 @@
+import json
 import re
 from bs4 import BeautifulSoup, Tag
 
@@ -15,7 +16,7 @@ SPEC_ALIASES: list[tuple[str, tuple[str, ...]]] = [
     ("battery", ("battery", "배터리", "사용시간")),
     ("weight", ("weight", "무게", "중량")),
     ("power", ("전력", "tdp", "tgp", "tbp", "소비전력")),
-    ("extras", ("기타", "포트", "단자", "특징", "extras")),
+    ("extras", ("기타", "특징", "extras")),
 ]
 
 BRANDS = [
@@ -116,11 +117,18 @@ def html_to_markdown(html: str) -> str:
 
 
 def _name(soup: BeautifulSoup) -> str:
-    heading = soup.find("h1")
-    if heading:
-        return heading.get_text(" ", strip=True)
+    for selector in (".prod_tit", ".prod_name", "h1"):
+        heading = soup.select_one(selector)
+        if heading is None:
+            continue
+        text = heading.get_text(" ", strip=True)
+        if text and text.casefold() not in {"danawa", "다나와"}:
+            return text
+    og = soup.find("meta", property="og:title")
+    if og and og.get("content"):
+        return str(og["content"]).split(":")[0].strip()
     if soup.title and soup.title.string:
-        return soup.title.string.split("·")[0].strip()
+        return re.split(r"[·:|]", soup.title.string)[0].strip()
     return ""
 
 
@@ -150,8 +158,17 @@ def _category(soup: BeautifulSoup, name: str) -> str:
 
 
 def _price(soup: BeautifulSoup) -> str | None:
-    node = soup.select_one(".price")
-    text = node.get_text(" ", strip=True) if node else soup.get_text(" ", strip=True)[:1500]
+    for selector in (".lwst_prc", ".prc_c", ".price_real", "[itemprop=price]", ".price"):
+        node = soup.select_one(selector)
+        if node is None:
+            continue
+        found = _price_in_text(node.get_text(" ", strip=True))
+        if found:
+            return found
+    return _price_in_text(soup.get_text(" ", strip=True)[:4000])
+
+
+def _price_in_text(text: str) -> str | None:
     match = re.search(r"(?:₩\s*)?(\d{1,3}(?:,\d{3})+|\d{4,})\s*원", text)
     if match:
         return f"{match.group(1)}원"
@@ -163,30 +180,167 @@ def _price(soup: BeautifulSoup) -> str | None:
 
 def _specs(soup: BeautifulSoup) -> dict[str, str]:
     found: dict[str, str] = {}
+    for label, value in [
+        *_table_pairs(soup),
+        *_definition_pairs(soup),
+        *_labeled_pairs(soup),
+        *_jsonld_pairs(soup),
+        *_slash_pairs(soup),
+    ]:
+        _store_spec(found, label, value)
+    return found
+
+
+def _store_spec(found: dict[str, str], label: str, value: str) -> None:
+    clean_label = _clean_label(label)
+    clean_value = re.sub(r"\s+", " ", value).strip(" ,/")
+    if not clean_label or not clean_value or len(clean_value) > 180:
+        return
+    key = _canonical(clean_label) or clean_label
+    if key in found:
+        if clean_label in {"특징", "기타"}:
+            existing = [part.strip() for part in found[key].split(",")]
+            if clean_value not in existing:
+                found[key] = f"{found[key]}, {clean_value}"
+        return
+    found[key] = clean_value
+
+
+def _table_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
     for row in soup.find_all("tr"):
         cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"])]
         cells = [cell for cell in cells if cell]
-        if len(cells) < 2:
+        if len(cells) < 2 or cells[0] in {"항목", "스펙"}:
             continue
-        key = _canonical(cells[0])
-        if key and key not in found and cells[0] not in {"항목", "스펙"}:
-            found[key] = cells[1]
+        pairs.append((cells[0], cells[1]))
+    return pairs
+
+
+def _definition_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
     for term in soup.find_all("dt"):
         value_node = term.find_next_sibling("dd")
         if value_node is None:
             continue
-        key = _canonical(term.get_text(" ", strip=True))
-        if key and key not in found:
-            found[key] = value_node.get_text(" ", strip=True)
-    return found
+        pairs.append((term.get_text(" ", strip=True), value_node.get_text(" ", strip=True)))
+    return pairs
+
+
+def _labeled_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    for row in soup.select("li, div"):
+        label_node = row.select_one(":scope > .tit, :scope > .label, :scope > .spec_tit")
+        value_node = row.select_one(":scope > .desc, :scope > .value, :scope > .spec_desc")
+        if label_node is None or value_node is None:
+            continue
+        pairs.append((label_node.get_text(" ", strip=True), value_node.get_text(" ", strip=True)))
+    return pairs
+
+
+def _jsonld_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text()
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        for node in _json_nodes(payload):
+            props = node.get("additionalProperty")
+            if isinstance(props, dict):
+                props = [props]
+            if not isinstance(props, list):
+                continue
+            for prop in props:
+                if not isinstance(prop, dict):
+                    continue
+                name = prop.get("name")
+                value = prop.get("value")
+                if name and value is not None:
+                    pairs.append((str(name), str(value)))
+    return pairs
+
+
+def _json_nodes(payload: object) -> list[dict]:
+    nodes: list[dict] = []
+    if isinstance(payload, dict):
+        nodes.append(payload)
+        for value in payload.values():
+            nodes.extend(_json_nodes(value))
+    elif isinstance(payload, list):
+        for item in payload:
+            nodes.extend(_json_nodes(item))
+    return nodes
+
+
+def _slash_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
+    nodes = soup.select(".spec_list .items, [class*='spec_list'] .items")
+    if not nodes:
+        nodes = soup.select(".spec_list")
+    if not nodes:
+        nodes = [
+            node
+            for node in soup.find_all(["div", "p"])
+            if isinstance(node, Tag) and _looks_like_spec_line(node.get_text(" ", strip=True)) and not node.find(["div", "p"])
+        ]
+    pairs: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for node in nodes:
+        text = node.get_text(" ", strip=True)
+        if text in seen or not _looks_like_spec_line(text):
+            continue
+        seen.add(text)
+        features: list[str] = []
+        for segment in re.split(r"\s+/\s+", text):
+            segment = segment.strip(" ,")
+            if not segment:
+                continue
+            if ":" in segment:
+                label, value = segment.split(":", 1)
+                pairs.append((label, value))
+                continue
+            label, value = _classify_bare(segment)
+            if label == "특징":
+                features.append(value)
+            else:
+                pairs.append((label, value))
+        if features:
+            pairs.append(("특징", ", ".join(features)))
+    return pairs
+
+
+def _looks_like_spec_line(text: str) -> bool:
+    return 20 < len(text) < 4000 and text.count(" / ") >= 3
+
+
+def _classify_bare(token: str) -> tuple[str, str]:
+    if re.search(r"\b(rtx|gtx|rx|arc)\s*\d", token, re.I) or any(word in token for word in ("지포스", "라데온")):
+        return "gpu", token
+    if re.search(r"pcie\s*\d", token, re.I):
+        return "인터페이스", token
+    if re.search(r"\d+(?:\.\d+)?\s*w\b", token, re.I):
+        return "power", token
+    if re.search(r"gddr\d|hbm\d?", token, re.I):
+        return "메모리 종류", token
+    if re.search(r"\d+\s*팬", token):
+        return "팬", token
+    return "특징", token
+
+
+def _clean_label(label: str) -> str:
+    text = re.sub(r"\s+", " ", label).strip(" :/|")
+    if not text or len(text) > 40:
+        return ""
+    if text.casefold() in {"항목", "스펙", "spec", "specification", "상품정보"}:
+        return ""
+    return text
 
 
 def _canonical(label: str) -> str | None:
-    lowered = label.lower().strip()
-    if lowered in {"항목", "스펙", "spec", "specification"}:
-        return None
+    lowered = re.sub(r"\s+", "", label.casefold())
     for key, aliases in SPEC_ALIASES:
-        if any(alias in lowered for alias in aliases):
+        if lowered in {alias.replace(" ", "") for alias in aliases}:
             return key
     return None
 

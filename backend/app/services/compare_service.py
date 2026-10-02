@@ -39,6 +39,12 @@ CPU_RANKS = sorted(
 
 GPU_RANKS = sorted(
     [
+        ("rtx 5090", 120),
+        ("rtx 5080", 112),
+        ("rtx 5070 ti", 104),
+        ("rtx 5070", 96),
+        ("rtx 5060 ti", 84),
+        ("rtx 5060", 76),
         ("rtx 4090", 99),
         ("rtx 4080", 94),
         ("rtx 4070 ti super", 90),
@@ -59,12 +65,25 @@ GPU_RANKS = sorted(
 
 def build_spec_rows(products: list[HardwareAnalysisResult]) -> list[SpecComparisonRow]:
     rows: list[SpecComparisonRow] = []
+    known = {key for key, _label in SPEC_FIELDS}
     for key, label in SPEC_FIELDS:
         values = [_value_for(product, key) for product in products]
         if not any(values):
             continue
         winner, note = _winner(key, values)
         rows.append(SpecComparisonRow(key=key, label=label, values=values, winner_index=winner, note=note))
+    extra_keys: list[str] = []
+    for product in products:
+        for key in product.spec.specs:
+            if key in known or key in extra_keys:
+                continue
+            extra_keys.append(key)
+    for key in extra_keys:
+        values = [_value_for(product, key) for product in products]
+        if not any(values):
+            continue
+        winner, note = _extra_winner(key, values)
+        rows.append(SpecComparisonRow(key=key, label=key, values=values, winner_index=winner, note=note))
     return rows
 
 
@@ -120,6 +139,65 @@ def _value_note(products: list[HardwareAnalysisResult], wins: list[int]) -> str:
         f"표시 가격은 {products[cheaper].spec.name} 쪽이 {gap_label} 더 낮습니다. "
         f"스펙 우위 항목은 {products[0].spec.name} {wins[0]}개, {products[1].spec.name} {wins[1]}개입니다."
     )
+
+
+def _extra_winner(label: str, values: list[str]) -> tuple[int | None, str | None]:
+    if len(values) != 2 or not values[0] or not values[1]:
+        return None, None
+    higher = _extra_direction(label)
+    if higher is None:
+        return None, None
+    measured = [_measure(value) for value in values]
+    if any(item is None for item in measured):
+        return None, None
+    left, right = measured[0], measured[1]
+    assert left is not None and right is not None
+    if left[1] != right[1] or not _meaningful(label, left[0], right[0]):
+        return None, None
+    left_wins = left[0] > right[0] if higher else left[0] < right[0]
+    if left[0] == right[0]:
+        return None, None
+    winner = 0 if left_wins else 1
+    return winner, _extra_note(left[0], right[0], left[1], higher)
+
+
+def _extra_direction(label: str) -> bool | None:
+    lowered = label.casefold()
+    if any(token in lowered for token in ("길이", "가로", "두께", "무게", "전력", "소비", "소음")):
+        return False
+    if any(token in lowered for token in ("클럭", "대역폭", "프로세서", "tops", "용량")):
+        return True
+    return None
+
+
+def _measure(value: str) -> tuple[float, str] | None:
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(mhz|ghz|mm|cm|gb/s|gb|tb|w|tops)", value, re.I)
+    if not match:
+        return None
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    if unit == "ghz":
+        return amount * 1000, "mhz"
+    if unit == "cm":
+        return amount * 10, "mm"
+    if unit == "tb":
+        return amount * 1024, "gb"
+    return amount, unit
+
+
+def _extra_note(left: float, right: float, unit: str, higher: bool) -> str:
+    gap = abs(left - right)
+    if unit == "mhz":
+        return f"{gap:.0f}MHz {'높음' if higher else '낮음'}"
+    if unit == "mm":
+        return f"{gap:.1f}mm {'짧음' if not higher else '김'}"
+    if unit == "gb/s":
+        return f"{gap:.0f}GB/s 넓음"
+    if unit == "w":
+        return f"{gap:.0f}W 낮음"
+    if gap >= 100:
+        return f"{gap:.0f}{unit} 차이"
+    return f"{gap:.1f}{unit} 차이"
 
 
 def _value_for(product: HardwareAnalysisResult, key: str) -> str:

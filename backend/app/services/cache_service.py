@@ -17,7 +17,7 @@ _memory: dict[str, tuple[datetime, dict]] = {}
 def cache_key(url: str, provider: Provider) -> str:
     parsed = urlparse(url)
     normalized = urlunparse(parsed._replace(fragment="")).rstrip("/")
-    return f"{provider}:{normalized}"
+    return f"p3:{provider}:{normalized}"
 
 
 async def get_cached(url: str, provider: Provider) -> HardwareAnalysisResult | None:

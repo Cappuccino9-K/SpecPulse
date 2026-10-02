@@ -11,7 +11,10 @@ from app.services.parser import html_to_markdown
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "SpecPulseBot/1.0 (hardware spec research; +https://demo.specpulse.app)"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+)
 
 
 class AnalysisError(Exception):
@@ -25,7 +28,11 @@ async def fetch_html(url: str) -> str:
     from app.services.url_safety import UrlSafetyError, validate_public_url
 
     current = url
-    headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+    }
     async with httpx.AsyncClient(timeout=20, headers=headers) as client:
         for _ in range(4):
             try:

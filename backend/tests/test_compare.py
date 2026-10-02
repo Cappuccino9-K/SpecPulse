@@ -41,6 +41,33 @@ def test_tablet_winners() -> None:
     assert _row(products, "battery").winner_index == 1
 
 
+def test_danawa_rows_compare_clock_and_length() -> None:
+    left = parse_hardware(
+        """
+        <h1>A 카드</h1>
+        <div class="spec_list"><div class="items">
+          RTX 5090 / 850W 이상 / 부스트클럭: 2610MHz / 가로(길이): 304mm / VRAM 대역폭: 1792 GB/s
+        </div></div>
+        """,
+        "https://prod.danawa.com/a",
+    )
+    right = parse_hardware(
+        """
+        <h1>B 카드</h1>
+        <div class="spec_list"><div class="items">
+          RTX 5080 / 750W 이상 / 부스트클럭: 2500MHz / 가로(길이): 330mm / VRAM 대역폭: 960 GB/s
+        </div></div>
+        """,
+        "https://prod.danawa.com/b",
+    )
+    rows = {row.key: row for row in build_spec_rows([left, right])}
+    assert rows["gpu"].values == ["RTX 5090", "RTX 5080"]
+    assert rows["부스트클럭"].winner_index == 0
+    assert rows["가로(길이)"].winner_index == 0
+    assert rows["VRAM 대역폭"].winner_index == 0
+    assert "price" not in rows
+
+
 def test_gpu_winners() -> None:
     products = _pair("rtx-4070-super", "rx-7800-xt")
     assert _row(products, "price").winner_index == 1

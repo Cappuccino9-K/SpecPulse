@@ -9,7 +9,7 @@ export function SpecCompareTable({ result }: { result: CompareResponse }) {
       <div className="flex items-end justify-between gap-3 border-b border-line px-4 py-4 sm:px-5">
         <div>
           <h2 className="text-base font-semibold tracking-tight">핵심 스펙 비교</h2>
-          <p className="mt-1 text-xs text-muted">초록 칸은 수치로 봤을 때 우위입니다. 차이가 작으면 표시하지 않습니다.</p>
+          <p className="mt-1 text-xs text-muted">페이지에서 읽은 스펙을 같은 항목끼리 맞춥니다. 초록 칸은 수치 우위입니다.</p>
         </div>
       </div>
 
@@ -102,9 +102,9 @@ function ProductHeading({
           {product.spec.name}
         </p>
         <p className="mt-0.5 text-xs text-muted">{product.spec.price ?? "가격 정보 없음"}</p>
-        {slug ? (
+        {slug || product.spec.url ? (
           <a
-            href={`/demo/products/${slug}`}
+            href={slug ? `/demo/products/${slug}` : product.spec.url ?? "#"}
             target="_blank"
             rel="noreferrer"
             className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary"
