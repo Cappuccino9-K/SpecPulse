@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -45,7 +47,7 @@ def test_rejects_same_url_and_private_targets() -> None:
 
 
 def test_second_compare_is_cached() -> None:
-    url = f"{MACBOOK}?case=cache"
+    url = f"{MACBOOK}?case={uuid4().hex}"
     with TestClient(app) as client:
         first = client.post("/api/extract", json={"url": url, "provider": "local"})
         second = client.post("/api/extract", json={"url": url, "provider": "local"})

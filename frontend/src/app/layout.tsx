@@ -28,6 +28,14 @@ try {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className={noto.variable} suppressHydrationWarning>
+      <head>
+        {/* next/font only ships the latin subset; this stylesheet supplies Hangul. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+        />
+      </head>
       <body className="antialiased">
         <Script id="specpulse-theme" strategy="beforeInteractive">
           {themeBoot}

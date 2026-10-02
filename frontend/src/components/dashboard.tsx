@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { compareProducts, deleteComparison, fetchComparison, fetchHistory } from "@/lib/api";
 import { validateUrl } from "@/lib/utils";
 import type { CompareResponse, HistoryItem, Provider } from "@/types/analysis";
@@ -14,6 +14,12 @@ import { SpecCompareTable } from "@/components/spec-compare-table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UrlInputForm } from "@/components/url-input-form";
 
+const SAMPLE_PAIRS: Record<string, [string, string]> = {
+  laptops: ["https://demo.specpulse.app/macbook-air-m3", "https://demo.specpulse.app/galaxy-book4-pro"],
+  tablets: ["https://demo.specpulse.app/ipad-pro-13-m4", "https://demo.specpulse.app/galaxy-tab-s9-ultra"],
+  gpus: ["https://demo.specpulse.app/rtx-4070-super", "https://demo.specpulse.app/rx-7800-xt"],
+};
+
 export function Dashboard() {
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
@@ -24,6 +30,7 @@ export function Dashboard() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const sampleStarted = useRef(false);
 
   useEffect(() => {
     fetchHistory()
@@ -34,7 +41,7 @@ export function Dashboard() {
   useEffect(() => {
     if (status !== "loading") return;
     setStep(0);
-    const timers = [700, 1500, 2400].map((delay, index) => window.setTimeout(() => setStep(index + 1), delay));
+    const timers = [350, 750, 1150].map((delay, index) => window.setTimeout(() => setStep(index + 1), delay));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [status]);
 
@@ -46,10 +53,10 @@ export function Dashboard() {
     }
   }
 
-  async function onSubmit() {
-    const leftError = validateUrl(left);
-    const rightError = validateUrl(right);
-    const same = !leftError && !rightError && left.trim().replace(/\/$/, "") === right.trim().replace(/\/$/, "");
+  async function submitPair(nextLeft: string, nextRight: string, nextProvider: Provider = provider) {
+    const leftError = validateUrl(nextLeft);
+    const rightError = validateUrl(nextRight);
+    const same = !leftError && !rightError && nextLeft.trim().replace(/\/$/, "") === nextRight.trim().replace(/\/$/, "");
     setErrors({
       left: leftError ?? undefined,
       right: rightError ?? (same ? "서로 다른 제품 주소를 입력해 주세요." : undefined),
@@ -58,8 +65,11 @@ export function Dashboard() {
 
     setStatus("loading");
     setMessage("");
+    const started = performance.now();
     try {
-      const next = await compareProducts([left.trim(), right.trim()], provider);
+      const next = await compareProducts([nextLeft.trim(), nextRight.trim()], nextProvider);
+      const remaining = 1500 - (performance.now() - started);
+      if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
       setResult(next);
       setStatus("ready");
       await refreshHistory();
@@ -67,6 +77,23 @@ export function Dashboard() {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "분석을 끝내지 못했습니다.");
     }
+  }
+
+  useEffect(() => {
+    if (sampleStarted.current) return;
+    const sample = new URLSearchParams(window.location.search).get("sample");
+    const pair = sample ? SAMPLE_PAIRS[sample] : undefined;
+    if (!pair) return;
+    sampleStarted.current = true;
+    setLeft(pair[0]);
+    setRight(pair[1]);
+    void submitPair(pair[0], pair[1], "local");
+    // Preset query runs once on load; submitPair closes over the initial provider.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onSubmit() {
+    await submitPair(left, right);
   }
 
   async function openHistory(id: string) {

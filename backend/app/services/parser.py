@@ -213,11 +213,12 @@ def _overall(name: str, pros: list[str], cons: list[str], reviews: list[str]) ->
 
 
 def _sentiment(pros: list[str], cons: list[str], reviews: list[str]) -> float:
-    base = 62 + (len(pros) - len(cons)) * 4
-    text = " ".join(reviews)
-    positive_hits = sum(text.count(word) for word in POSITIVE_WORDS)
-    negative_hits = sum(text.count(word) for word in NEGATIVE_WORDS)
-    tilt = 0.0
-    if positive_hits + negative_hits:
-        tilt = (positive_hits - negative_hits) / (positive_hits + negative_hits) * 18
-    return round(min(96, max(8, base + tilt)), 1)
+    positive = " ".join([*pros, *reviews])
+    negative = " ".join(cons)
+    positive_hits = sum(positive.count(word) for word in POSITIVE_WORDS) + len(pros)
+    negative_hits = sum(negative.count(word) for word in NEGATIVE_WORDS) + len(cons)
+    total = positive_hits + negative_hits
+    if total == 0:
+        return 60.0
+    ratio = positive_hits / total
+    return round(min(92, max(46, 42 + ratio * 50)), 1)
