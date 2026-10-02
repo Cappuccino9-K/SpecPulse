@@ -7,9 +7,8 @@ from app.models import Base
 
 settings = get_settings()
 if settings.database_url.startswith("sqlite"):
-    engine = create_async_engine(settings.database_url)
-else:
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    raise RuntimeError("SpecPulse는 PostgreSQL만 사용합니다. DATABASE_URL을 postgresql+asyncpg:// 로 설정하세요.")
+engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 

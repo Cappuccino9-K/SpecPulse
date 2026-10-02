@@ -7,30 +7,71 @@ function Stop-Tree([System.Diagnostics.Process] $Process) {
   & taskkill.exe /PID $Process.Id /T /F 2>$null | Out-Null
 }
 
-Write-Host "SpecPulse를 루트에서 시작합니다."
+function Find-Psql {
+  $cmd = Get-Command psql -ErrorAction SilentlyContinue
+  if ($cmd) { return $cmd.Source }
+  $installed = Get-ChildItem "C:\Program Files\PostgreSQL\*\bin\psql.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+  if ($installed) { return $installed.FullName }
+  return $null
+}
 
-$useSqlite = $true
-if (Get-Command docker -ErrorAction SilentlyContinue) {
-  docker info 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) {
-    Write-Host "PostgreSQL을 띄웁니다."
-    docker compose up -d
-    if ($LASTEXITCODE -eq 0) {
-      for ($i = 0; $i -lt 30; $i++) {
-        docker compose exec -T db pg_isready -U specpulse -d specpulse 2>$null | Out-Null
-        if ($LASTEXITCODE -eq 0) { $useSqlite = $false; break }
-        Start-Sleep -Seconds 1
+function Test-AppDatabase([string] $Psql) {
+  $previous = $env:PGPASSWORD
+  $env:PGPASSWORD = "specpulse"
+  & $Psql -h 127.0.0.1 -U specpulse -d specpulse -c "SELECT 1" 1>$null 2>$null
+  $ok = $LASTEXITCODE -eq 0
+  $env:PGPASSWORD = $previous
+  return $ok
+}
+
+function Initialize-AppDatabase([string] $Psql) {
+  $services = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue
+  foreach ($service in $services) {
+    if ($service.Status -ne "Running") {
+      try { Start-Service $service.Name } catch {
+        Write-Host "PostgreSQL 서비스 $($service.Name) 를 시작하지 못했습니다. services.msc에서 실행 중인지 확인하세요."
       }
     }
   }
+
+  if (Test-AppDatabase $Psql) { return }
+
+  Write-Host "로컬 PostgreSQL에 specpulse 데이터베이스를 만듭니다."
+  Write-Host "설치할 때 정한 postgres 계정 비밀번호를 입력하세요."
+  $secure = Read-Host "postgres password" -AsSecureString
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    $adminPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  }
+
+  $previous = $env:PGPASSWORD
+  $env:PGPASSWORD = $adminPassword
+  & $Psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DO `$`$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'specpulse') THEN CREATE ROLE specpulse LOGIN PASSWORD 'specpulse'; ELSE ALTER ROLE specpulse WITH LOGIN PASSWORD 'specpulse'; END IF; END `$`$;"
+  if ($LASTEXITCODE -ne 0) {
+    $env:PGPASSWORD = $previous
+    throw "postgres 계정으로 접속하지 못했습니다. 비밀번호와 PostgreSQL 서비스 상태를 확인하세요."
+  }
+  $exists = (& $Psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'specpulse'").Trim()
+  if ($exists -ne "1") {
+    & $Psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE specpulse OWNER specpulse;"
+    if ($LASTEXITCODE -ne 0) { throw "specpulse 데이터베이스를 만들지 못했습니다." }
+  }
+  & $Psql -h 127.0.0.1 -U postgres -d specpulse -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO specpulse;"
+  $env:PGPASSWORD = $previous
+  if (-not (Test-AppDatabase $Psql)) { throw "specpulse 데이터베이스에 접속하지 못했습니다." }
 }
 
-if ($useSqlite) {
-  Write-Host "Docker 가상화를 쓸 수 없어 파일 데이터베이스로 실행합니다. BIOS 설정 없이도 동작합니다."
-  $env:DATABASE_URL = "sqlite+aiosqlite:///./specpulse.db"
-} else {
-  $env:DATABASE_URL = "postgresql+asyncpg://specpulse:specpulse@127.0.0.1:5432/specpulse"
+Write-Host "SpecPulse를 루트에서 시작합니다."
+
+$psql = Find-Psql
+if (-not $psql) {
+  throw "PostgreSQL이 설치되어 있지 않습니다. Docker는 사용하지 않습니다. https://www.postgresql.org/download/windows/ 에서 Windows 설치본을 설치한 뒤 start.bat을 다시 실행하세요."
 }
+
+Initialize-AppDatabase $psql
+$env:DATABASE_URL = "postgresql+asyncpg://specpulse:specpulse@127.0.0.1:5432/specpulse"
 
 $python = $null
 $pythonArgs = @()
@@ -76,7 +117,7 @@ if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
   Pop-Location
 }
 
-Write-Host "API http://127.0.0.1:8765  화면 http://127.0.0.1:43123"
+Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:8765  화면 http://127.0.0.1:43123"
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
 $backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru

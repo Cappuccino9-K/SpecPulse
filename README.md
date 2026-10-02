@@ -10,7 +10,7 @@
 
 ## 로컬 실행
 
-Windows에서는 압축을 푼 루트 폴더의 `start.bat`을 더블클릭합니다. Docker Desktop이 켜지면 PostgreSQL을 쓰고, 가상화가 꺼져 Docker가 실패하면 자동으로 SQLite 파일 데이터베이스로 실행합니다. PowerShell에서는 루트에서 아래 한 줄입니다.
+Windows에서는 Docker를 쓰지 않습니다. [PostgreSQL Windows 설치본](https://www.postgresql.org/download/windows/)을 설치한 뒤, 압축을 푼 루트 폴더의 `start.bat`을 더블클릭합니다. 설치할 때 정한 `postgres` 비밀번호를 한 번 물어보고, 앱 전용 `specpulse` 데이터베이스를 만듭니다. PowerShell에서는 루트에서 아래 한 줄입니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\start.ps1
@@ -18,11 +18,7 @@ powershell -ExecutionPolicy Bypass -File .\start.ps1
 
 처음 실행은 Python 가상환경과 npm 패키지를 만들면서 몇 분 걸립니다. 끝나면 브라우저는 http://127.0.0.1:43123 입니다. 창을 닫거나 Ctrl+C 로 프론트와 API를 같이 멈춥니다.
 
-직접 나누어 실행할 때는 PostgreSQL을 먼저 띄웁니다.
-
-```bash
-docker compose up -d
-```
+직접 나누어 실행할 때는 로컬 PostgreSQL이 `127.0.0.1:5432`에서 떠 있어야 합니다. 접속 주소는 `backend/.env.example`의 `DATABASE_URL`입니다.
 
 백엔드:
 
