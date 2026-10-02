@@ -93,11 +93,26 @@ $encoded = [Uri]::EscapeDataString($password)
 $env:DATABASE_URL = "postgresql+psycopg://postgres:${encoded}@127.0.0.1:5432/specpulse"
 $password = $null
 
+function Invoke-Quiet {
+  param([string] $Exe, [string[]] $ArgumentList)
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $raw = & $Exe @ArgumentList 2>&1
+    return @{ Code = $LASTEXITCODE; Lines = @($raw | ForEach-Object { "$_" }) }
+  } catch {
+    return @{ Code = 1; Lines = @("$_") }
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+}
+
 function Get-PythonFacts {
   param([string] $Exe, [string[]] $PrefixArgs)
-  $raw = & $Exe @PrefixArgs -c "import sys; print(sys.version_info.major); print(sys.version_info.minor); print(64 if sys.maxsize > 2**32 else 32)" 2>$null
-  if ($LASTEXITCODE -ne 0) { return $null }
-  $lines = @($raw | Where-Object { $_ -ne $null -and "$_".Trim() -ne "" })
+  if (-not $PrefixArgs) { $PrefixArgs = @() }
+  $probe = Invoke-Quiet $Exe ($PrefixArgs + @("-c", "import sys; print(sys.version_info.major); print(sys.version_info.minor); print(64 if sys.maxsize > 2**32 else 32)"))
+  if ($probe.Code -ne 0) { return $null }
+  $lines = @($probe.Lines | Where-Object { $_ -match '^\d+$' })
   if ($lines.Count -lt 3) { return $null }
   return @{
     Major = [int]$lines[0]
@@ -111,33 +126,34 @@ function Test-SupportedPython($Facts) {
   return $Facts.Bits -eq 64 -and $Facts.Major -eq 3 -and $Facts.Minor -ge 11 -and $Facts.Minor -le 14
 }
 
-$pythonCandidates = @()
-if (Get-Command py -ErrorAction SilentlyContinue) {
-  $pythonCandidates += @{ Exe = "py"; Args = @("-3.13") }
-  $pythonCandidates += @{ Exe = "py"; Args = @("-3.12") }
-  $pythonCandidates += @{ Exe = "py"; Args = @("-3.11") }
-  $pythonCandidates += @{ Exe = "py"; Args = @("-3.14") }
-  $pythonCandidates += @{ Exe = "py"; Args = @("-3") }
-}
-if (Get-Command python -ErrorAction SilentlyContinue) {
-  $pythonCandidates += @{ Exe = "python"; Args = @() }
-}
-if ($pythonCandidates.Count -eq 0) {
-  throw "Python 3.11-3.14 64비트가 필요합니다. https://www.python.org/downloads/ 에서 Windows installer (64-bit)를 설치하고 Add python.exe to PATH를 켜 주세요."
-}
-
-$python = $null
-$pythonArgs = @()
-foreach ($candidate in $pythonCandidates) {
-  $facts = Get-PythonFacts $candidate.Exe $candidate.Args
-  if (Test-SupportedPython $facts) {
-    $python = $candidate.Exe
-    $pythonArgs = $candidate.Args
-    break
+function Get-InstalledPythonCommands {
+  $commands = @()
+  if (Get-Command py -ErrorAction SilentlyContinue) {
+    $listed = Invoke-Quiet "py" @("-0p")
+    foreach ($line in $listed.Lines) {
+      if ($line -match '([A-Za-z]:\\[^"]*python\.exe)') {
+        $commands += @{ Exe = $Matches[1]; Args = @() }
+      }
+    }
+    foreach ($tag in @("-3.13", "-3.12", "-3.11", "-3.14", "-3")) {
+      $commands += @{ Exe = "py"; Args = @($tag) }
+    }
   }
-}
-if (-not $python) {
-  throw "지원하는 Python이 없습니다. 3.11, 3.12, 3.13, 3.14 64비트만 사용할 수 있습니다. Python 3.15와 32비트는 휠이 없어 설치가 실패합니다. https://www.python.org/downloads/windows/ 에서 Windows installer (64-bit) 3.13을 설치하세요."
+  if (Get-Command python -ErrorAction SilentlyContinue) {
+    $commands += @{ Exe = "python"; Args = @() }
+  }
+  $patterns = @(
+    (Join-Path $env:LocalAppData "Programs\Python\Python*\python.exe"),
+    (Join-Path $env:ProgramFiles "Python*\python.exe"),
+    "C:\Python*\python.exe"
+  )
+  foreach ($pattern in $patterns) {
+    $found = Get-Item $pattern -ErrorAction SilentlyContinue
+    foreach ($item in @($found)) {
+      if ($item) { $commands += @{ Exe = $item.FullName; Args = @() } }
+    }
+  }
+  return $commands
 }
 
 $venvDir = Join-Path $Root "backend\.venv"
@@ -151,6 +167,28 @@ if (Test-Path $venvPython) {
   }
 }
 if (-not (Test-Path $venvPython)) {
+  $python = $null
+  $pythonArgs = @()
+  $seen = @{}
+  foreach ($candidate in (Get-InstalledPythonCommands)) {
+    $key = "$($candidate.Exe) $($candidate.Args -join ' ')"
+    if ($seen.ContainsKey($key)) { continue }
+    $seen[$key] = $true
+    $facts = Get-PythonFacts $candidate.Exe $candidate.Args
+    if (Test-SupportedPython $facts) {
+      $python = $candidate.Exe
+      $pythonArgs = $candidate.Args
+      Write-Host "Python $($facts.Major).$($facts.Minor) 64비트를 사용합니다."
+      break
+    }
+  }
+  if (-not $python) {
+    $listing = ""
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+      $listing = ((Invoke-Quiet "py" @("-0p")).Lines -join "`n")
+    }
+    throw "지원하는 Python이 없습니다. 3.11, 3.12, 3.13, 3.14 64비트만 사용할 수 있습니다. Python 3.15와 32비트는 휠이 없어 설치가 실패합니다. https://www.python.org/downloads/windows/ 에서 Windows installer (64-bit) 3.13을 설치하세요.`n설치된 런타임:`n$listing"
+  }
   Write-Host "Python 가상환경을 만듭니다."
   & $python @pythonArgs -m venv $venvDir
   if ($LASTEXITCODE -ne 0) { throw "가상환경을 만들지 못했습니다." }
