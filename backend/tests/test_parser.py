@@ -64,6 +64,28 @@ def test_danawa_spec_list_is_not_price_only() -> None:
     assert "백플레이트" in result.spec.specs["extras"]
 
 
+def test_compuzone_spec_class_reads_cpu_line() -> None:
+    html = """
+    <h1>인텔 코어 i3-14100</h1>
+    <span class="p_spec" style="width:1068px;">인텔(소켓1700) / 4코어 / 8쓰레드 / 기본 클럭: 3.5GHz / 최대 클럭: 4.7GHz / 캐시: 12MB / PBP: 60W / 메모리 규격: DDR4 / 3200MHz / DDR5 / 4800MHz / 내장그래픽: 탑재 / 랩터레이크 리프레시 / 코어 i3 / 벌크 (쿨러 미포함) / 7nm</span>
+    <div class="respect">이 문장은 spec이 아닙니다 / a / b / c / d</div>
+    """
+    result = parse_hardware(html, "https://www.compuzone.co.kr/product/1")
+    assert result.spec.category == "CPU"
+    assert result.spec.specs["소켓"] == "인텔(소켓1700)"
+    assert result.spec.specs["코어"] == "4코어"
+    assert result.spec.specs["스레드"] == "8쓰레드"
+    assert result.spec.specs["기본 클럭"] == "3.5GHz"
+    assert result.spec.specs["최대 클럭"] == "4.7GHz"
+    assert result.spec.specs["캐시"] == "12MB"
+    assert result.spec.specs["power"] == "60W"
+    assert result.spec.specs["메모리 규격"] == "DDR4 3200MHz, DDR5 4800MHz"
+    assert result.spec.specs["내장그래픽"] == "탑재"
+    assert result.spec.specs["cpu"] == "코어 i3"
+    assert result.spec.specs["공정"] == "7nm"
+    assert "이 문장은 spec이 아닙니다" not in " ".join(result.spec.specs.values())
+
+
 def test_generic_spec_table_keeps_unlisted_labels() -> None:
     html = """
     <h1>샘플 그래픽카드</h1>

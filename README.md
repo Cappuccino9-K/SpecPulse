@@ -1,6 +1,6 @@
 # SpecPulse
 
-노트북, 태블릿, 그래픽카드 페이지 주소 두 개를 넣어 스펙을 나란히 비교하고, 사용자 리뷰에서 장점·아쉬운 점·추천 대상을 정리하는 대시보드입니다.
+CPU, 메모리, SSD, 메인보드, 노트북, 태블릿, 그래픽카드처럼 상품 페이지 주소 두 개를 넣어 스펙을 나란히 비교하고, 사용자 리뷰에서 장점·아쉬운 점·추천 대상을 정리하는 대시보드입니다.
 
 - 백엔드: FastAPI, Pydantic v2, SQLAlchemy, PostgreSQL, Crawl4AI(선택)
 - 프론트엔드: Next.js (App Router), TypeScript, Tailwind CSS

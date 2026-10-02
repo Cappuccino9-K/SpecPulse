@@ -1,4 +1,4 @@
-import { Cpu, ExternalLink, Laptop, Tablet } from "lucide-react";
+import { Cpu, ExternalLink, HardDrive, Laptop, MemoryStick, Monitor, Tablet, Zap } from "lucide-react";
 import { cn, demoSlug } from "@/lib/utils";
 import type { CompareResponse } from "@/types/analysis";
 
@@ -134,6 +134,11 @@ function ValueCell({ value, winner, note }: { value: string; winner: boolean; no
 
 function categoryIcon(category: string) {
   if (category.includes("태블릿")) return Tablet;
+  if (category.includes("모니터")) return Monitor;
+  if (category.includes("메모리")) return MemoryStick;
+  if (category.includes("저장")) return HardDrive;
+  if (category.includes("파워")) return Zap;
+  if (category === "CPU" || category.includes("프로세서")) return Cpu;
   if (category.includes("그래픽")) return Cpu;
   return Laptop;
 }

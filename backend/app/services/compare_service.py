@@ -163,15 +163,15 @@ def _extra_winner(label: str, values: list[str]) -> tuple[int | None, str | None
 
 def _extra_direction(label: str) -> bool | None:
     lowered = label.casefold()
-    if any(token in lowered for token in ("길이", "가로", "두께", "무게", "전력", "소비", "소음")):
+    if any(token in lowered for token in ("길이", "가로", "두께", "무게", "전력", "소비", "소음", "공정", "pbp", "tdp")):
         return False
-    if any(token in lowered for token in ("클럭", "대역폭", "프로세서", "tops", "용량")):
+    if any(token in lowered for token in ("클럭", "대역폭", "프로세서", "tops", "용량", "코어", "스레드", "쓰레드", "캐시")):
         return True
     return None
 
 
 def _measure(value: str) -> tuple[float, str] | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(mhz|ghz|mm|cm|gb/s|gb|tb|w|tops)", value, re.I)
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(mhz|ghz|mm|cm|gb/s|gb|mb|tb|nm|w|tops)", value, re.I)
     if not match:
         return None
     amount = float(match.group(1))

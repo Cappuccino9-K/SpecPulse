@@ -14,7 +14,7 @@ STRUCTURE_SCHEMA = {
     "spec": {
         "name": "제품명",
         "brand": "브랜드",
-        "category": "노트북|태블릿|그래픽카드|전자제품",
+        "category": "CPU|메모리|저장장치|메인보드|파워|모니터|노트북|태블릿|그래픽카드|전자제품",
         "specs": {
             "cpu": "",
             "gpu": "",

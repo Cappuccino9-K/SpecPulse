@@ -80,7 +80,9 @@ export function UrlInputForm({
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-base font-semibold tracking-tight">비교할 제품 페이지</h2>
-          <p className="mt-1 text-sm text-muted">주소 두 개를 넣으면 스펙과 리뷰를 동시에 읽습니다.</p>
+          <p className="mt-1 text-sm text-muted">
+            종류와 상관없이 상세 주소 두 개면 됩니다. CPU, 메모리, SSD, 메인보드, 파워, 모니터, 노트북, 태블릿, 그래픽카드를 같은 칸에서 비교합니다.
+          </p>
         </div>
         <div className="mt-3 inline-flex rounded-full bg-surface-container p-1 sm:mt-0" role="radiogroup" aria-label="분석 엔진">
           {PROVIDERS.map((item) => (
@@ -106,7 +108,7 @@ export function UrlInputForm({
         <OutlinedField
           label="제품 A"
           value={left}
-          placeholder="https://demo.specpulse.app/macbook-air-m3"
+          placeholder="https://쇼핑몰/제품-상세-주소"
           error={errors.left}
           onChange={onLeft}
         />
@@ -116,14 +118,15 @@ export function UrlInputForm({
         <OutlinedField
           label="제품 B"
           value={right}
-          placeholder="https://demo.specpulse.app/galaxy-book4-pro"
+          placeholder="https://쇼핑몰/비교할-제품-주소"
           error={errors.right}
           onChange={onRight}
         />
       </div>
 
       <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-2" aria-label="샘플 비교">
+        <div className="flex flex-wrap items-center gap-2" aria-label="샘플 비교">
+          <span className="text-xs font-medium text-muted">샘플</span>
           {presets.map((preset) => {
             const selected = left === preset.urls[0] && right === preset.urls[1];
             return (

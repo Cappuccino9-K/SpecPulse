@@ -15,7 +15,7 @@ SPEC_ALIASES: list[tuple[str, tuple[str, ...]]] = [
     ("display", ("display", "디스플레이", "화면", "해상도", "패널")),
     ("battery", ("battery", "배터리", "사용시간")),
     ("weight", ("weight", "무게", "중량")),
-    ("power", ("전력", "tdp", "tgp", "tbp", "소비전력")),
+    ("power", ("전력", "tdp", "tgp", "tbp", "pbp", "소비전력")),
     ("extras", ("기타", "특징", "extras")),
 ]
 
@@ -147,14 +147,28 @@ def _category(soup: BeautifulSoup, name: str) -> str:
     meta = soup.find("meta", attrs={"name": "category"})
     if meta and meta.get("content"):
         return str(meta["content"]).strip()
-    haystack = f"{name} {soup.get_text(' ', strip=True)[:400]}".lower()
-    if any(token in haystack for token in ("그래픽카드", "geforce", "radeon", "rtx", "gpu")):
-        return "그래픽카드"
-    if any(token in haystack for token in ("태블릿", "ipad", "아이패드", "galaxy tab")):
-        return "태블릿"
-    if any(token in haystack for token in ("노트북", "macbook", "laptop", "그램")):
-        return "노트북"
-    return "전자제품"
+    named = _category_from_text(name.lower())
+    if named:
+        return named
+    return _category_from_text(soup.get_text(" ", strip=True)[:500].lower()) or "전자제품"
+
+
+def _category_from_text(haystack: str) -> str | None:
+    checks = (
+        ("CPU", ("코어 i", "core i", "라이젠", "ryzen", "셀러론", "펜티엄", "프로세서")),
+        ("메모리", ("ddr4", "ddr5", "램 ", "메모리 규격")),
+        ("저장장치", ("ssd", "nvme", "hdd")),
+        ("메인보드", ("메인보드", "소켓1700", "칩셋")),
+        ("모니터", ("모니터", "주사율")),
+        ("파워", ("파워서플라이", "80plus", "정격")),
+        ("그래픽카드", ("그래픽카드", "geforce", "지포스", "radeon", "라데온", "rtx", "gpu")),
+        ("태블릿", ("태블릿", "ipad", "아이패드", "galaxy tab")),
+        ("노트북", ("노트북", "macbook", "laptop", "그램")),
+    )
+    for label, tokens in checks:
+        if any(token in haystack for token in tokens):
+            return label
+    return None
 
 
 def _price(soup: BeautifulSoup) -> str | None:
@@ -274,15 +288,20 @@ def _json_nodes(payload: object) -> list[dict]:
     return nodes
 
 
+SPEC_CLASS = re.compile(r"(?:^|[^a-z0-9])specs?(?:ification)?(?:[^a-z0-9]|$)", re.I)
+UNIT_VALUE = re.compile(r"^\d+(?:\.\d+)?\s*(?:mhz|ghz|gb|mb|kb|w|nm|mm|cm|gb/s|tops)$", re.I)
+MEMORY_TOKEN = re.compile(r"^(?:lp)?ddr\d[a-z]?$", re.I)
+
+
 def _slash_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
-    nodes = soup.select(".spec_list .items, [class*='spec_list'] .items")
-    if not nodes:
-        nodes = soup.select(".spec_list")
+    nodes = _spec_marked_nodes(soup)
     if not nodes:
         nodes = [
             node
-            for node in soup.find_all(["div", "p"])
-            if isinstance(node, Tag) and _looks_like_spec_line(node.get_text(" ", strip=True)) and not node.find(["div", "p"])
+            for node in soup.find_all(["div", "p", "span", "li"])
+            if isinstance(node, Tag)
+            and _looks_like_spec_line(node.get_text(" ", strip=True))
+            and not node.find(["div", "p", "span", "li"])
         ]
     pairs: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -291,30 +310,90 @@ def _slash_pairs(soup: BeautifulSoup) -> list[tuple[str, str]]:
         if text in seen or not _looks_like_spec_line(text):
             continue
         seen.add(text)
-        features: list[str] = []
-        for segment in re.split(r"\s+/\s+", text):
-            segment = segment.strip(" ,")
-            if not segment:
-                continue
-            if ":" in segment:
-                label, value = segment.split(":", 1)
-                pairs.append((label, value))
-                continue
-            label, value = _classify_bare(segment)
-            if label == "특징":
-                features.append(value)
-            else:
-                pairs.append((label, value))
-        if features:
-            pairs.append(("특징", ", ".join(features)))
+        pairs.extend(_pairs_from_spec_line(text))
     return pairs
 
 
+def _spec_marked_nodes(soup: BeautifulSoup) -> list[Tag]:
+    marked = [
+        node
+        for node in soup.find_all(True)
+        if isinstance(node, Tag) and SPEC_CLASS.search(_node_identity(node))
+    ]
+    leaves: list[Tag] = []
+    for node in marked:
+        if any(child is not node and child in marked for child in node.find_all(True)):
+            continue
+        if _looks_like_spec_line(node.get_text(" ", strip=True)):
+            leaves.append(node)
+    return leaves
+
+
+def _node_identity(node: Tag) -> str:
+    classes = " ".join(str(name) for name in (node.get("class") or []))
+    return f"{classes} {node.get('id') or ''}"
+
+
+def _pairs_from_spec_line(text: str) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    features: list[str] = []
+    for segment in _segments(text):
+        if ":" in segment:
+            label, value = segment.split(":", 1)
+            pairs.append((label.strip(), value.strip()))
+            continue
+        if _continue_previous(pairs, segment):
+            continue
+        label, value = _classify_bare(segment)
+        if label == "특징":
+            features.append(value)
+        else:
+            pairs.append((label, value))
+    if features:
+        pairs.append(("특징", ", ".join(features)))
+    return pairs
+
+
+def _segments(text: str) -> list[str]:
+    shielded = re.sub(r"\b(GB|MB|GT)/s\b", lambda match: match.group(0).replace("/", "\u2044"), text, flags=re.I)
+    parts = [part.strip(" ,") for part in re.split(r"\s*/\s*", shielded) if part.strip(" ,")]
+    return [part.replace("\u2044", "/") for part in parts]
+
+
+def _continue_previous(pairs: list[tuple[str, str]], segment: str) -> bool:
+    if not pairs:
+        return False
+    label, value = pairs[-1]
+    if label in {"특징", "기타"}:
+        return False
+    memory = "메모리" in label or "ddr" in label.casefold()
+    if memory and (UNIT_VALUE.match(segment) or MEMORY_TOKEN.match(segment)):
+        joiner = " " if UNIT_VALUE.match(segment) else ", "
+        pairs[-1] = (label, f"{value}{joiner}{segment}".strip())
+        return True
+    if UNIT_VALUE.match(segment) and any(token in label for token in ("클럭", "캐시", "대역폭", "전력")):
+        pairs[-1] = (label, f"{value} {segment}".strip())
+        return True
+    return False
+
+
 def _looks_like_spec_line(text: str) -> bool:
-    return 20 < len(text) < 4000 and text.count(" / ") >= 3
+    return 12 < len(text) < 5000 and len(_segments(text)) >= 4
 
 
 def _classify_bare(token: str) -> tuple[str, str]:
+    if re.search(r"소켓\s*\d+|lga\s*\d+", token, re.I):
+        return "소켓", token
+    if re.search(r"\d+\s*코어", token):
+        return "코어", token
+    if re.search(r"\d+\s*(쓰레드|스레드)", token):
+        return "스레드", token
+    if re.search(r"(코어\s*i\d|core\s*i\d|라이젠|ryzen|셀러론|펜티엄)", token, re.I):
+        return "cpu", token
+    if re.search(r"\d+\s*nm\b", token, re.I):
+        return "공정", token
+    if re.search(r"벌크|정품|쿨러", token):
+        return "구성", token
     if re.search(r"\b(rtx|gtx|rx|arc)\s*\d", token, re.I) or any(word in token for word in ("지포스", "라데온")):
         return "gpu", token
     if re.search(r"pcie\s*\d", token, re.I):

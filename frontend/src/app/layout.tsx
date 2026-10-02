@@ -13,7 +13,7 @@ const noto = Noto_Sans_KR({
 export const metadata: Metadata = {
   title: "SpecPulse — 하드웨어 스펙 비교와 리뷰 감성 분석",
   description:
-    "노트북, 태블릿, 그래픽카드 페이지 두 곳을 읽어 스펙 우위, 실사용자 장단점, 구매 가이드를 한 화면에 정리합니다.",
+    "CPU, 메모리, 그래픽카드, 노트북처럼 상품 페이지 두 곳을 읽어 스펙 우위와 구매 가이드를 한 화면에 정리합니다.",
 };
 
 const themeBoot = `
