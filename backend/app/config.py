@@ -7,7 +7,7 @@ Provider = Literal["local", "openai", "ollama"]
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://specpulse:specpulse@127.0.0.1:5432/specpulse"
+    database_url: str = "postgresql+psycopg://specpulse:specpulse@127.0.0.1:5432/specpulse"
     llm_provider: Provider = "local"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

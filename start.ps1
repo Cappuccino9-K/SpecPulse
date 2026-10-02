@@ -90,7 +90,7 @@ if ([string]::IsNullOrWhiteSpace($password)) {
 
 Initialize-AppDatabase $psql $password
 $encoded = [Uri]::EscapeDataString($password)
-$env:DATABASE_URL = "postgresql+asyncpg://postgres:${encoded}@127.0.0.1:5432/specpulse"
+$env:DATABASE_URL = "postgresql+psycopg://postgres:${encoded}@127.0.0.1:5432/specpulse"
 $password = $null
 
 $python = $null
