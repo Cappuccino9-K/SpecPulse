@@ -10,7 +10,15 @@
 
 ## 로컬 실행
 
-PostgreSQL이 먼저 떠 있어야 합니다.
+Windows에서는 압축을 푼 루트 폴더의 `start.bat`을 더블클릭합니다. Docker Desktop이 켜져 있어야 합니다. PowerShell에서는 루트에서 아래 한 줄입니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
+
+처음 실행은 Python 가상환경과 npm 패키지를 만들면서 몇 분 걸립니다. 끝나면 브라우저는 http://127.0.0.1:43123 입니다. 창을 닫거나 Ctrl+C 로 프론트와 API를 같이 멈춥니다.
+
+직접 나누어 실행할 때는 PostgreSQL을 먼저 띄웁니다.
 
 ```bash
 docker compose up -d
