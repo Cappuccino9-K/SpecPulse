@@ -15,16 +15,37 @@ function Find-Psql {
   return $null
 }
 
-function Test-AppDatabase([string] $Psql) {
-  $previous = $env:PGPASSWORD
-  $env:PGPASSWORD = "specpulse"
-  & $Psql -h 127.0.0.1 -U specpulse -d specpulse -c "SELECT 1" 1>$null 2>$null
-  $ok = $LASTEXITCODE -eq 0
-  $env:PGPASSWORD = $previous
-  return $ok
+function Read-Secret([string] $Label) {
+  $secure = Read-Host $Label -AsSecureString
+  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  }
 }
 
-function Initialize-AppDatabase([string] $Psql) {
+function Invoke-Psql {
+  param(
+    [string] $Psql,
+    [string] $Database,
+    [string] $Sql,
+    [switch] $Capture
+  )
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  if ($Capture) {
+    $output = & $Psql -h 127.0.0.1 -U postgres -d $Database -v ON_ERROR_STOP=1 -tAc $Sql 2>$null
+  } else {
+    & $Psql -h 127.0.0.1 -U postgres -d $Database -v ON_ERROR_STOP=1 -c $Sql 1>$null 2>$null
+    $output = $null
+  }
+  $code = $LASTEXITCODE
+  $ErrorActionPreference = $previous
+  return @{ Code = $code; Output = "$output".Trim() }
+}
+
+function Initialize-AppDatabase([string] $Psql, [string] $Password) {
   $services = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue
   foreach ($service in $services) {
     if ($service.Status -ne "Running") {
@@ -34,44 +55,43 @@ function Initialize-AppDatabase([string] $Psql) {
     }
   }
 
-  if (Test-AppDatabase $Psql) { return }
-
-  Write-Host "로컬 PostgreSQL에 specpulse 데이터베이스를 만듭니다."
-  Write-Host "설치할 때 정한 postgres 계정 비밀번호를 입력하세요."
-  $secure = Read-Host "postgres password" -AsSecureString
-  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-  try {
-    $adminPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-  } finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-  }
-
   $previous = $env:PGPASSWORD
-  $env:PGPASSWORD = $adminPassword
-  & $Psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DO `$`$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'specpulse') THEN CREATE ROLE specpulse LOGIN PASSWORD 'specpulse'; ELSE ALTER ROLE specpulse WITH LOGIN PASSWORD 'specpulse'; END IF; END `$`$;"
-  if ($LASTEXITCODE -ne 0) {
+  $env:PGPASSWORD = $Password
+  $check = Invoke-Psql -Psql $Psql -Database "postgres" -Sql "SELECT 1" -Capture
+  if ($check.Code -ne 0) {
     $env:PGPASSWORD = $previous
-    throw "postgres 계정으로 접속하지 못했습니다. 비밀번호와 PostgreSQL 서비스 상태를 확인하세요."
+    throw "postgres 계정으로 접속하지 못했습니다. 비밀번호를 다시 확인하고 start.bat을 다시 실행하세요."
   }
-  $exists = (& $Psql -h 127.0.0.1 -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'specpulse'").Trim()
-  if ($exists -ne "1") {
-    & $Psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE specpulse OWNER specpulse;"
-    if ($LASTEXITCODE -ne 0) { throw "specpulse 데이터베이스를 만들지 못했습니다." }
+
+  $exists = Invoke-Psql -Psql $Psql -Database "postgres" -Sql "SELECT 1 FROM pg_database WHERE datname = 'specpulse'" -Capture
+  if ($exists.Output -ne "1") {
+    $created = Invoke-Psql -Psql $Psql -Database "postgres" -Sql "CREATE DATABASE specpulse"
+    if ($created.Code -ne 0) {
+      $env:PGPASSWORD = $previous
+      throw "specpulse 데이터베이스를 만들지 못했습니다."
+    }
   }
-  & $Psql -h 127.0.0.1 -U postgres -d specpulse -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO specpulse;"
+  Invoke-Psql -Psql $Psql -Database "specpulse" -Sql "GRANT ALL ON SCHEMA public TO postgres" | Out-Null
   $env:PGPASSWORD = $previous
-  if (-not (Test-AppDatabase $Psql)) { throw "specpulse 데이터베이스에 접속하지 못했습니다." }
 }
 
 Write-Host "SpecPulse를 루트에서 시작합니다."
 
 $psql = Find-Psql
 if (-not $psql) {
-  throw "PostgreSQL이 설치되어 있지 않습니다. Docker는 사용하지 않습니다. https://www.postgresql.org/download/windows/ 에서 Windows 설치본을 설치한 뒤 start.bat을 다시 실행하세요."
+  throw "PostgreSQL이 설치되어 있지 않습니다. https://www.postgresql.org/download/windows/ 에서 Windows 설치본을 설치한 뒤 start.bat을 다시 실행하세요."
 }
 
-Initialize-AppDatabase $psql
-$env:DATABASE_URL = "postgresql+asyncpg://specpulse:specpulse@127.0.0.1:5432/specpulse"
+Write-Host "PostgreSQL 설치 때 정한 postgres 비밀번호를 입력하세요. 이 값은 화면에 표시되지 않고 파일에도 저장하지 않습니다."
+$password = Read-Secret "postgres password"
+if ([string]::IsNullOrWhiteSpace($password)) {
+  throw "비밀번호가 비어 있습니다."
+}
+
+Initialize-AppDatabase $psql $password
+$encoded = [Uri]::EscapeDataString($password)
+$env:DATABASE_URL = "postgresql+asyncpg://postgres:${encoded}@127.0.0.1:5432/specpulse"
+$password = $null
 
 $python = $null
 $pythonArgs = @()
