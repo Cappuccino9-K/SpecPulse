@@ -99,7 +99,9 @@ if ([string]::IsNullOrWhiteSpace($password)) {
 
 Initialize-AppDatabase $psql $password
 $encoded = [Uri]::EscapeDataString($password)
-$env:DATABASE_URL = "postgresql+psycopg://postgres:${encoded}@127.0.0.1:5432/specpulse"
+$env:DATABASE_URL = "postgresql+pg8000://postgres:${encoded}@127.0.0.1:5432/specpulse"
+$env:PYTHONUNBUFFERED = "1"
+$env:PYTHONFAULTHANDLER = "1"
 $password = $null
 
 function Invoke-Quiet {

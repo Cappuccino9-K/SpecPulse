@@ -4,7 +4,7 @@ pydantic==2.13.5; python_version < "3.15"
 pydantic==2.14.0b2; python_version >= "3.15"
 pydantic-settings==2.7.1
 sqlalchemy==2.0.36
-psycopg[binary]==3.3.6
+pg8000==1.31.5
 httpx==0.28.1
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
