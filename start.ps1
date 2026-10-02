@@ -93,26 +93,73 @@ $encoded = [Uri]::EscapeDataString($password)
 $env:DATABASE_URL = "postgresql+psycopg://postgres:${encoded}@127.0.0.1:5432/specpulse"
 $password = $null
 
-$python = $null
-$pythonArgs = @()
-if (Get-Command py -ErrorAction SilentlyContinue) {
-  $python = "py"
-  $pythonArgs = @("-3")
-} elseif (Get-Command python -ErrorAction SilentlyContinue) {
-  $python = "python"
-} else {
-  throw "Python 3.11 이상이 필요합니다. https://www.python.org/downloads/ 에서 설치하고 Add python.exe to PATH를 켜 주세요."
+function Get-PythonFacts {
+  param([string] $Exe, [string[]] $PrefixArgs)
+  $raw = & $Exe @PrefixArgs -c "import sys; print(sys.version_info.major); print(sys.version_info.minor); print(64 if sys.maxsize > 2**32 else 32)" 2>$null
+  if ($LASTEXITCODE -ne 0) { return $null }
+  $lines = @($raw | Where-Object { $_ -ne $null -and "$_".Trim() -ne "" })
+  if ($lines.Count -lt 3) { return $null }
+  return @{
+    Major = [int]$lines[0]
+    Minor = [int]$lines[1]
+    Bits = [int]$lines[2]
+  }
 }
 
-$venvPython = Join-Path $Root "backend\.venv\Scripts\python.exe"
+function Test-SupportedPython($Facts) {
+  if (-not $Facts) { return $false }
+  return $Facts.Bits -eq 64 -and $Facts.Major -eq 3 -and $Facts.Minor -ge 11 -and $Facts.Minor -le 14
+}
+
+$pythonCandidates = @()
+if (Get-Command py -ErrorAction SilentlyContinue) {
+  $pythonCandidates += @{ Exe = "py"; Args = @("-3.13") }
+  $pythonCandidates += @{ Exe = "py"; Args = @("-3.12") }
+  $pythonCandidates += @{ Exe = "py"; Args = @("-3.11") }
+  $pythonCandidates += @{ Exe = "py"; Args = @("-3.14") }
+  $pythonCandidates += @{ Exe = "py"; Args = @("-3") }
+}
+if (Get-Command python -ErrorAction SilentlyContinue) {
+  $pythonCandidates += @{ Exe = "python"; Args = @() }
+}
+if ($pythonCandidates.Count -eq 0) {
+  throw "Python 3.11-3.14 64비트가 필요합니다. https://www.python.org/downloads/ 에서 Windows installer (64-bit)를 설치하고 Add python.exe to PATH를 켜 주세요."
+}
+
+$python = $null
+$pythonArgs = @()
+foreach ($candidate in $pythonCandidates) {
+  $facts = Get-PythonFacts $candidate.Exe $candidate.Args
+  if (Test-SupportedPython $facts) {
+    $python = $candidate.Exe
+    $pythonArgs = $candidate.Args
+    break
+  }
+}
+if (-not $python) {
+  throw "지원하는 Python이 없습니다. 3.11, 3.12, 3.13, 3.14 64비트만 사용할 수 있습니다. Python 3.15와 32비트는 휠이 없어 설치가 실패합니다. https://www.python.org/downloads/windows/ 에서 Windows installer (64-bit) 3.13을 설치하세요."
+}
+
+$venvDir = Join-Path $Root "backend\.venv"
+$venvPython = Join-Path $venvDir "Scripts\python.exe"
+if (Test-Path $venvPython) {
+  $venvFacts = Get-PythonFacts $venvPython @()
+  if (-not (Test-SupportedPython $venvFacts)) {
+    $label = if ($venvFacts) { "$($venvFacts.Major).$($venvFacts.Minor) $($venvFacts.Bits)비트" } else { "알 수 없음" }
+    Write-Host "기존 가상환경 Python $label 는 지원하지 않아 다시 만듭니다."
+    Remove-Item -Recurse -Force $venvDir
+  }
+}
 if (-not (Test-Path $venvPython)) {
   Write-Host "Python 가상환경을 만듭니다."
-  & $python @pythonArgs -m venv (Join-Path $Root "backend\.venv")
+  & $python @pythonArgs -m venv $venvDir
   if ($LASTEXITCODE -ne 0) { throw "가상환경을 만들지 못했습니다." }
 }
 
 Write-Host "백엔드 패키지를 확인합니다. 처음에는 몇 분 걸립니다."
-& $venvPython -m pip install -q -r (Join-Path $Root "backend\requirements.txt")
+& $venvPython -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) { throw "pip 업그레이드에 실패했습니다." }
+& $venvPython -m pip install --only-binary=:all: -r (Join-Path $Root "backend\requirements.txt")
 if ($LASTEXITCODE -ne 0) { throw "pip install에 실패했습니다." }
 
 $envFile = Join-Path $Root "backend\.env"

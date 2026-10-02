@@ -10,6 +10,8 @@
 
 ## 로컬 실행
 
+Python은 3.11, 3.12, 3.13, 3.14 64비트만 지원합니다. 3.15와 32비트 설치본은 미리 빌드된 패키지가 없어 `pip install`이 실패합니다.
+
 Windows에서는 Docker를 쓰지 않습니다. [PostgreSQL Windows 설치본](https://www.postgresql.org/download/windows/)을 설치한 뒤, 압축을 푼 루트 폴더의 `start.bat`을 더블클릭합니다. 실행할 때마다 설치 때 정한 `postgres` 비밀번호를 입력받습니다. 비밀번호는 화면에 보이지 않고 파일에도 저장하지 않습니다. PowerShell에서는 루트에서 아래 한 줄입니다.
 
 ```powershell
