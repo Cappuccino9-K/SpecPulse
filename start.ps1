@@ -231,7 +231,7 @@ if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
   Pop-Location
 }
 
-Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:8765  화면 http://127.0.0.1:43123"
+Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:8765  화면 http://127.0.0.1:43721"
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
 $backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru

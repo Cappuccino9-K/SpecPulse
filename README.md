@@ -18,7 +18,7 @@ Windows에서는 Docker를 쓰지 않습니다. [PostgreSQL Windows 설치본](h
 powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-처음 실행은 Python 가상환경과 npm 패키지를 만들면서 몇 분 걸립니다. 끝나면 브라우저는 http://127.0.0.1:43123 입니다. 창을 닫거나 Ctrl+C 로 프론트와 API를 같이 멈춥니다.
+처음 실행은 Python 가상환경과 npm 패키지를 만들면서 몇 분 걸립니다. 끝나면 브라우저는 http://127.0.0.1:43721 입니다. 창을 닫거나 Ctrl+C 로 프론트와 API를 같이 멈춥니다.
 
 직접 나누어 실행할 때는 로컬 PostgreSQL이 `127.0.0.1:5432`에서 떠 있어야 합니다. 접속 주소는 `backend/.env.example`의 `DATABASE_URL`입니다.
 
@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 [http://127.0.0.1:43123](http://127.0.0.1:43123) 을 엽니다. Next.js가 `/backend-api` 요청을 FastAPI `8765` 포트로 넘깁니다.
+브라우저에서 [http://127.0.0.1:43721](http://127.0.0.1:43721) 을 엽니다. Next.js가 `/backend-api` 요청을 FastAPI `8765` 포트로 넘깁니다.
 
 샘플 칩(노트북, 태블릿, 그래픽카드)은 `demo.specpulse.app` 주소로 보이지만, 서버가 들고 있는 데모 페이지를 읽습니다. 원문 페이지 링크로 HTML을 직접 볼 수 있습니다. `/?sample=laptops`, `/?sample=tablets`, `/?sample=gpus` 로 열면 해당 샘플 비교가 바로 시작됩니다.
 

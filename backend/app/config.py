@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 3600
     cors_origins: str = (
         "http://localhost:3000,http://127.0.0.1:3000,"
-        "http://localhost:43123,http://127.0.0.1:43123"
+        "http://localhost:43721,http://127.0.0.1:43721"
     )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

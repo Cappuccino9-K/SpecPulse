@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-The dev server listens on port 43123 and proxies `/backend-api` to FastAPI on port 8765.
+The dev server listens on port 43721 and proxies `/backend-api` to FastAPI on port 8765.
