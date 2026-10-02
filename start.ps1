@@ -123,20 +123,20 @@ function Get-PythonFacts {
 
 function Test-SupportedPython($Facts) {
   if (-not $Facts) { return $false }
-  return $Facts.Bits -eq 64 -and $Facts.Major -eq 3 -and $Facts.Minor -ge 11 -and $Facts.Minor -le 14
+  return $Facts.Bits -eq 64 -and $Facts.Major -eq 3 -and $Facts.Minor -ge 11 -and $Facts.Minor -le 15
 }
 
 function Get-InstalledPythonCommands {
   $commands = @()
   if (Get-Command py -ErrorAction SilentlyContinue) {
+    foreach ($tag in @("-3.13", "-3.12", "-3.11", "-3.14", "-3.15", "-3")) {
+      $commands += @{ Exe = "py"; Args = @($tag) }
+    }
     $listed = Invoke-Quiet "py" @("-0p")
     foreach ($line in $listed.Lines) {
       if ($line -match '([A-Za-z]:\\[^"]*python\.exe)') {
         $commands += @{ Exe = $Matches[1]; Args = @() }
       }
-    }
-    foreach ($tag in @("-3.13", "-3.12", "-3.11", "-3.14", "-3")) {
-      $commands += @{ Exe = "py"; Args = @($tag) }
     }
   }
   if (Get-Command python -ErrorAction SilentlyContinue) {
@@ -187,7 +187,7 @@ if (-not (Test-Path $venvPython)) {
     if (Get-Command py -ErrorAction SilentlyContinue) {
       $listing = ((Invoke-Quiet "py" @("-0p")).Lines -join "`n")
     }
-    throw "지원하는 Python이 없습니다. 3.11, 3.12, 3.13, 3.14 64비트만 사용할 수 있습니다. Python 3.15와 32비트는 휠이 없어 설치가 실패합니다. https://www.python.org/downloads/windows/ 에서 Windows installer (64-bit) 3.13을 설치하세요.`n설치된 런타임:`n$listing"
+    throw "지원하는 Python이 없습니다. 3.11부터 3.15까지 64비트가 필요합니다. 32비트는 휠이 없어 설치가 실패합니다. https://www.python.org/downloads/windows/ 에서 Windows installer (64-bit)를 설치하세요.`n설치된 런타임:`n$listing"
   }
   Write-Host "Python 가상환경을 만듭니다."
   & $python @pythonArgs -m venv $venvDir
