@@ -210,6 +210,15 @@ Write-Host "백엔드 패키지를 확인합니다. 처음에는 몇 분 걸립�
 if ($LASTEXITCODE -ne 0) { throw "pip 업그레이드에 실패했습니다." }
 & $venvPython -m pip install --only-binary=:all: -r (Join-Path $Root "backend\requirements.txt")
 if ($LASTEXITCODE -ne 0) { throw "pip install에 실패했습니다." }
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& $venvPython -m pip uninstall -y greenlet | Out-Null
+$ErrorActionPreference = $previousPreference
+$sitePackages = Join-Path $Root "backend\.venv\Lib\site-packages"
+if (Test-Path (Join-Path $sitePackages "greenlet")) {
+  Remove-Item -Recurse -Force (Join-Path $sitePackages "greenlet")
+}
+Get-ChildItem $sitePackages -Filter "greenlet-*.dist-info" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
 $envFile = Join-Path $Root "backend\.env"
 if (-not (Test-Path $envFile)) {
@@ -246,10 +255,11 @@ if (-not (Test-Path $nextBin)) {
   throw "프론트엔드 실행 파일을 찾지 못했습니다. frontend 폴더에서 npm install을 확인해 주세요."
 }
 
-Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:8765  화면 http://127.0.0.1:43721"
+$env:API_PROXY_TARGET = "http://127.0.0.1:18765"
+Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:18765  화면 http://127.0.0.1:43721"
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
-$backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru
+$backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "18765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru
 $frontend = Start-Process -FilePath $node -ArgumentList @($nextBin, "dev", "-H", "0.0.0.0", "-p", "43721") -WorkingDirectory (Join-Path $Root "frontend") -NoNewWindow -PassThru
 
 function Test-Running([System.Diagnostics.Process] $Process) {
