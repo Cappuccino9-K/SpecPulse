@@ -301,7 +301,11 @@ if (-not $javaExe) {
   throw "마이너갤러리는 JDK 17 또는 21이 필요합니다. https://adoptium.net 에서 Temurin 21(Windows x64)을 설치한 뒤 start.bat을 다시 실행하세요."
 }
 $env:JAVA_HOME = Split-Path (Split-Path $javaExe -Parent) -Parent
-$env:Path = "$(Join-Path $env:JAVA_HOME 'bin');$env:Path"
+$powershellHome = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0"
+if (-not (Test-Path (Join-Path $powershellHome "powershell.exe"))) {
+  $powershellHome = Join-Path $env:SystemRoot "Sysnative\WindowsPowerShell\v1.0"
+}
+$env:Path = "$(Join-Path $env:JAVA_HOME 'bin');$powershellHome;$env:Path"
 $mvnw = Join-Path $Root "gallery-service\mvnw.cmd"
 if (-not (Test-Path $mvnw)) {
   throw "gallery-service\mvnw.cmd 가 없습니다. 저장소를 다시 받아 주세요."

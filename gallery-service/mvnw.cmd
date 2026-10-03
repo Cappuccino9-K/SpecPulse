@@ -32,7 +32,14 @@
 @SET __MVNW_ERROR__=
 @SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
 @SET PSModulePath=
-@FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
+@REM PATH often has no powershell.exe. Use the Windows install path, same as start.bat.
+@SET "__MVNW_POWERSHELL__=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+@IF NOT EXIST "%__MVNW_POWERSHELL__%" SET "__MVNW_POWERSHELL__=%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+@IF NOT EXIST "%__MVNW_POWERSHELL__%" (
+  @echo PowerShell was not found. Install Windows PowerShell, then run start.bat again. >&2
+  @exit /b 1
+)
+@FOR /F "usebackq tokens=1* delims==" %%A IN (`%__MVNW_POWERSHELL__% -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
   IF "%%A"=="MVN_CMD" (set __MVNW_CMD__=%%B) ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)
 )
 @SET PSModulePath=%__MVNW_PSMODULEP_SAVE%
