@@ -1,0 +1,22 @@
+server:
+  address: 127.0.0.1
+  port: 18766
+
+spring:
+  application:
+    name: gallery-service
+  datasource:
+    url: ${GALLERY_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/specpulse}
+    username: ${GALLERY_DB_USER:postgres}
+    password: ${GALLERY_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+
+logging:
+  level:
+    org.hibernate.SQL: warn

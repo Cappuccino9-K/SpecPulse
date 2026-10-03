@@ -1,6 +1,5 @@
 "use client";
 
-import { Activity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { compareProducts, deleteComparison, fetchComparison, fetchHistory } from "@/lib/api";
 import { validateUrl } from "@/lib/utils";
@@ -10,8 +9,8 @@ import { EmptyState } from "@/components/empty-state";
 import { HistoryRail } from "@/components/history-rail";
 import { LoadingState } from "@/components/loading-state";
 import { SentimentCards } from "@/components/sentiment-cards";
+import { SiteHeader } from "@/components/site-header";
 import { SpecCompareTable } from "@/components/spec-compare-table";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UrlInputForm } from "@/components/url-input-form";
 
 const SAMPLE_PAIRS: Record<string, [string, string]> = {
@@ -127,20 +126,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary text-on-primary">
-              <Activity className="size-5" />
-            </span>
-            <div>
-              <p className="text-base font-bold tracking-tight">SpecPulse</p>
-              <p className="hidden text-xs text-muted sm:block">스펙은 나란히, 리뷰의 온도까지</p>
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <SiteHeader />
 
       <div className="mx-auto grid max-w-[1240px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         <HistoryRail items={history} activeId={result?.id ?? null} onOpen={openHistory} onDelete={removeHistory} />

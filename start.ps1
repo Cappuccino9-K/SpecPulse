@@ -16,6 +16,44 @@ function Stop-Tree([System.Diagnostics.Process] $Process) {
   }
 }
 
+function Find-Java {
+  $candidates = @()
+  if ($env:JAVA_HOME) {
+    $candidates += (Join-Path $env:JAVA_HOME "bin\java.exe")
+  }
+  $cmd = Get-Command java.exe -ErrorAction SilentlyContinue
+  if ($cmd) { $candidates += $cmd.Source }
+  $cmd = Get-Command java -ErrorAction SilentlyContinue
+  if ($cmd) { $candidates += $cmd.Source }
+  $roots = @(
+    "C:\Program Files\Eclipse Adoptium\jdk-*\bin\java.exe",
+    "C:\Program Files\Java\jdk-*\bin\java.exe",
+    "C:\Program Files\Microsoft\jdk-*\bin\java.exe",
+    "C:\Program Files\Amazon Corretto\jdk*\bin\java.exe"
+  )
+  foreach ($pattern in $roots) {
+    $found = Get-ChildItem $pattern -ErrorAction SilentlyContinue | Sort-Object FullName -Descending
+    foreach ($item in $found) { $candidates += $item.FullName }
+  }
+  $seen = @{}
+  foreach ($path in $candidates) {
+    if (-not $path -or $seen.ContainsKey($path) -or -not (Test-Path $path)) { continue }
+    $seen[$path] = $true
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $banner = (& $path -version 2>&1 | Out-String)
+    $ErrorActionPreference = $previous
+    if ($banner -match 'version "(?:1\.)?(\d+)') {
+      $major = [int]$Matches[1]
+      if ($major -ge 17) {
+        Write-Host "JDK $major 을 사용합니다. ($path)"
+        return $path
+      }
+    }
+  }
+  return $null
+}
+
 function Find-Psql {
   $cmd = Get-Command psql -ErrorAction SilentlyContinue
   if ($cmd) { return $cmd.Source }
@@ -100,6 +138,9 @@ if ([string]::IsNullOrWhiteSpace($password)) {
 Initialize-AppDatabase $psql $password
 $encoded = [Uri]::EscapeDataString($password)
 $env:DATABASE_URL = "postgresql+pg8000://postgres:${encoded}@127.0.0.1:5432/specpulse"
+$env:GALLERY_JDBC_URL = "jdbc:postgresql://127.0.0.1:5432/specpulse"
+$env:GALLERY_DB_USER = "postgres"
+$env:GALLERY_DB_PASSWORD = $password
 $env:PYTHONUNBUFFERED = "1"
 $env:PYTHONFAULTHANDLER = "1"
 $password = $null
@@ -255,11 +296,25 @@ if (-not (Test-Path $nextBin)) {
   throw "프론트엔드 실행 파일을 찾지 못했습니다. frontend 폴더에서 npm install을 확인해 주세요."
 }
 
+$javaExe = Find-Java
+if (-not $javaExe) {
+  throw "마이너갤러리는 JDK 17 또는 21이 필요합니다. https://adoptium.net 에서 Temurin 21(Windows x64)을 설치한 뒤 start.bat을 다시 실행하세요."
+}
+$env:JAVA_HOME = Split-Path (Split-Path $javaExe -Parent) -Parent
+$env:Path = "$(Join-Path $env:JAVA_HOME 'bin');$env:Path"
+$mvnw = Join-Path $Root "gallery-service\mvnw.cmd"
+if (-not (Test-Path $mvnw)) {
+  throw "gallery-service\mvnw.cmd 가 없습니다. 저장소를 다시 받아 주세요."
+}
+
 $env:API_PROXY_TARGET = "http://127.0.0.1:18765"
-Write-Host "PostgreSQL 127.0.0.1:5432  API http://127.0.0.1:18765  화면 http://127.0.0.1:43721"
+$env:GALLERY_PROXY_TARGET = "http://127.0.0.1:18766"
+Write-Host "PostgreSQL 127.0.0.1:5432  스펙 API http://127.0.0.1:18765  마이너갤 http://127.0.0.1:18766  화면 http://127.0.0.1:43721"
+Write-Host "갤러리(Spring Boot)는 처음 실행 때 Maven 의존성을 받느라 1~2분 걸릴 수 있습니다."
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
 $backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "18765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru
+$gallery = Start-Process -FilePath $env:ComSpec -ArgumentList @("/c", "mvnw.cmd", "-q", "spring-boot:run") -WorkingDirectory (Join-Path $Root "gallery-service") -NoNewWindow -PassThru
 $frontend = Start-Process -FilePath $node -ArgumentList @($nextBin, "dev", "-H", "0.0.0.0", "-p", "43721") -WorkingDirectory (Join-Path $Root "frontend") -NoNewWindow -PassThru
 
 function Test-Running([System.Diagnostics.Process] $Process) {
@@ -270,16 +325,20 @@ function Test-Running([System.Diagnostics.Process] $Process) {
 }
 
 try {
-  while ((Test-Running $backend) -and (Test-Running $frontend)) {
+  while ((Test-Running $backend) -and (Test-Running $frontend) -and (Test-Running $gallery)) {
     Start-Sleep -Seconds 1
   }
   if (-not (Test-Running $backend)) {
     Write-Host "API 프로세스가 종료되었습니다. 코드 $($backend.ExitCode)"
+  }
+  if (-not (Test-Running $gallery)) {
+    Write-Host "마이너갤 프로세스가 종료되었습니다. 코드 $($gallery.ExitCode)"
   }
   if (-not (Test-Running $frontend)) {
     Write-Host "화면 프로세스가 종료되었습니다. 코드 $($frontend.ExitCode)"
   }
 } finally {
   Stop-Tree $backend
+  Stop-Tree $gallery
   Stop-Tree $frontend
 }

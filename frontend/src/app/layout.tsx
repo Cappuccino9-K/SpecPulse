@@ -11,9 +11,9 @@ const noto = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "SpecPulse — 하드웨어 스펙 비교와 리뷰 감성 분석",
+  title: "SpecPulse — 하드웨어 스펙 비교와 마이너갤러리",
   description:
-    "CPU, 메모리, 그래픽카드, 노트북처럼 상품 페이지 두 곳을 읽어 스펙 우위와 구매 가이드를 한 화면에 정리합니다.",
+    "상품 페이지 두 곳의 스펙을 비교하고, CPU·그래픽카드·노트북·메모리 마이너갤에서 글을 남깁니다.",
 };
 
 const themeBoot = `
