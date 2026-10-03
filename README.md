@@ -58,6 +58,8 @@ export GALLERY_DB_PASSWORD='설치할 때 정한 비밀번호'
 
 스펙 비교와 마이너갤러리는 서로 다른 프로세스로 뜹니다. 저장소는 로컬 PostgreSQL `specpulse` 하나를 공유하고, 테이블은 나뉩니다. 스펙 API는 `comparisons`, `extraction_cache`를 쓰고 갤러리는 `mg_gallery`, `mg_post`, `mg_comment`, `mg_recommend`를 씁니다. 화면만 둘을 한 주소로 묶습니다.
 
+`specpulse`에 연결한 뒤 사용자 테이블마다 앞에서 20행을 보려면 `SELECT * FROM preview_all_tables();` 를 실행합니다. 앱을 한 번 켜면 `backend/sql/preview_all_tables.sql`의 함수가 만들어집니다. 행 수를 바꾸려면 `SELECT * FROM preview_all_tables(5);` 처럼 호출합니다.
+
 | 프로세스 | 포트 | 역할 |
 | --- | --- | --- |
 | Next.js | 43721 | 스펙 비교 화면, 마이너갤 화면 |
