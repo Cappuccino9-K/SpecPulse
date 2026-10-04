@@ -1,9 +1,11 @@
 package com.specpulse.gallery.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.specpulse.gallery.domain.AppUser;
 import com.specpulse.gallery.domain.GalleryRole;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +27,9 @@ class GalleryTokensTest {
     assertEquals("7", jwt.getSubject());
     assertEquals("MODERATOR", jwt.getClaim("role"));
     assertEquals("person@example.com", jwt.getClaim("email"));
+    Duration remaining = Duration.between(Instant.now(), jwt.getExpiresAt());
+    assertTrue(remaining.compareTo(GalleryTokens.LOGIN_TTL.minusSeconds(5)) > 0);
+    assertTrue(remaining.compareTo(GalleryTokens.LOGIN_TTL.plusSeconds(5)) < 0);
   }
 
   private static void setId(AppUser user, long id) {

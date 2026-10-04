@@ -5,8 +5,8 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GalleryTokens {
+  static final Duration LOGIN_TTL = Duration.ofHours(2);
   private final JwtEncoder encoder;
 
   public GalleryTokens(SecretKey galleryJwtKey) {
@@ -34,7 +35,7 @@ public class GalleryTokens {
             .issuer("specpulse-gallery")
             .subject(String.valueOf(user.getId()))
             .issuedAt(now)
-            .expiresAt(now.plus(7, ChronoUnit.DAYS))
+            .expiresAt(now.plus(LOGIN_TTL))
             .claim("email", user.getEmail())
             .claim("name", user.getName())
             .claim("role", user.getRole().name())

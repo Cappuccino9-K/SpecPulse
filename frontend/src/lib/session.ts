@@ -51,7 +51,7 @@ function readCookie(): string {
 }
 
 function writeCookie(token: string) {
-  const maxAge = token ? 60 * 60 * 24 * 7 : 0;
+  const maxAge = token ? 60 * 60 * 2 : 0;
   document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
 }
 
