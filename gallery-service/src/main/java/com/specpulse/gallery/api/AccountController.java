@@ -7,6 +7,8 @@ import com.specpulse.gallery.security.CurrentAccounts;
 import com.specpulse.gallery.service.AccountService;
 import com.specpulse.gallery.service.GalleryRequestService;
 import com.specpulse.gallery.service.GalleryService;
+import com.specpulse.gallery.security.GallerySessionCookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.slf4j.Logger;
@@ -55,6 +57,12 @@ public class AccountController {
   @GetMapping("/me")
   MeView me() {
     return MeView.from(CurrentAccounts.require());
+  }
+
+  @PostMapping("/logout")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void logout(HttpServletResponse response) {
+    GallerySessionCookie.clear(response);
   }
 
   @GetMapping("/members")

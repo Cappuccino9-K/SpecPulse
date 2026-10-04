@@ -47,6 +47,10 @@ class GoogleLoginHandlerTest {
     String token = URLDecoder.decode(location.substring(location.indexOf("token=") + 6), StandardCharsets.UTF_8);
     assertEquals("4", GalleryTokens.decoder(key).decode(token).getSubject());
     assertEquals("ADMIN", GalleryTokens.decoder(key).decode(token).getClaim("role"));
+    String setCookie = response.getHeader("Set-Cookie");
+    assertTrue(setCookie.startsWith("specpulse_session=" + token));
+    assertTrue(setCookie.contains("HttpOnly"));
+    assertTrue(setCookie.contains("Max-Age=7200"));
   }
 
   private static void setId(AppUser user, long id) throws ReflectiveOperationException {

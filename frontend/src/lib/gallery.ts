@@ -1,6 +1,6 @@
 import type { CommentView, GalleryCard, PostDetail, PostPage, RecommendResult } from "@/types/gallery";
 import type { AuthConfig, GalleryDraft, GalleryRequestItem, GalleryRole, Member } from "@/types/account";
-import { clearToken, currentToken } from "@/lib/session";
+import { currentToken, notifySession } from "@/lib/session";
 
 const CLIENT_KEY = "specpulse-gallery-client";
 
@@ -26,7 +26,7 @@ async function request<T>(
   path: string,
   init?: RequestInit,
   fallback = "마이너갤 요청을 처리하지 못했습니다.",
-  options?: { authenticated?: boolean },
+  options?: { authenticated?: boolean; quiet?: boolean },
 ): Promise<T> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
@@ -36,12 +36,12 @@ async function request<T>(
   }
   let response: Response;
   try {
-    response = await fetch(path, { cache: "no-store", ...init, headers });
+    response = await fetch(path, { cache: "no-store", credentials: "same-origin", ...init, headers });
   } catch {
     throw new Error("마이너갤 서버에 연결하지 못했습니다. JDK 17 이상이 있고 start.bat이 갤러리를 띄웠는지 확인해 주세요.");
   }
-  if (response.status === 401 && options?.authenticated && typeof window !== "undefined") {
-    clearToken();
+  if (response.status === 401 && options?.authenticated && !options.quiet && typeof window !== "undefined") {
+    notifySession();
   }
   if (!response.ok) {
     const authFallback = response.status === 401 ? "로그인이 만료되었습니다. 다시 로그인해 주세요." : fallback;
@@ -138,7 +138,13 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
 }
 
 export function fetchMe(): Promise<{ id: number; email: string; name: string; picture: string | null; role: GalleryRole }> {
-  return request("/gallery-api/me", undefined, "로그인이 필요합니다.", { authenticated: true });
+  return request("/gallery-api/me", undefined, "로그인이 필요합니다.", { authenticated: true, quiet: true });
+}
+
+export function endSession(): Promise<void> {
+  return fetch("/gallery-api/logout", { method: "POST", credentials: "same-origin", cache: "no-store" })
+    .then(() => undefined)
+    .catch(() => undefined);
 }
 
 export function openGallery(body: GalleryDraft): Promise<GalleryCard> {

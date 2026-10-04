@@ -1,6 +1,7 @@
 package com.specpulse.gallery.config;
 
 import com.specpulse.gallery.security.GalleryJwtAuthentication;
+import com.specpulse.gallery.security.GallerySessionCookie;
 import com.specpulse.gallery.security.GalleryTokens;
 import com.specpulse.gallery.security.GoogleLoginHandler;
 import java.io.IOException;
@@ -82,6 +83,8 @@ public class SecurityConfig {
               || path.startsWith("/api/members")
               || "/api/me".equals(path);
       if (!accountRequest) return null;
+      String session = GallerySessionCookie.read(request);
+      if (session != null) return session;
       return delegate.resolve(request);
     };
   }

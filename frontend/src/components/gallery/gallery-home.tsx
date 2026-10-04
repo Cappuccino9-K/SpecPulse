@@ -9,7 +9,7 @@ import { boardTime, fetchGalleries } from "@/lib/gallery";
 import type { GalleryCard } from "@/types/gallery";
 
 export function GalleryHome() {
-  const { session } = useAuth();
+  const { session, ready } = useAuth();
   const staff = session?.role === "ADMIN" || session?.role === "MODERATOR";
   const [items, setItems] = useState<GalleryCard[] | null>(null);
   const [error, setError] = useState("");
@@ -37,11 +37,11 @@ export function GalleryHome() {
               <Plus className="size-4" />
               {staff ? "갤러리 만들기" : "개설 요청"}
             </Link>
-          ) : (
+          ) : ready ? (
             <Link href="/login" className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-medium">
               로그인하고 갤러리 요청
             </Link>
-          )}
+          ) : null}
         </div>
 
         {error ? (

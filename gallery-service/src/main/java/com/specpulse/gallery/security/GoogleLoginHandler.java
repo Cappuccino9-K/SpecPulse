@@ -33,8 +33,9 @@ public class GoogleLoginHandler implements AuthenticationSuccessHandler, Authent
       throws IOException {
     try {
       AppUser user = accounts.upsertFromGoogle((OAuth2User) authentication.getPrincipal());
-      String token = URLEncoder.encode(tokens.issue(user), StandardCharsets.UTF_8);
-      // Query, not a hash: browsers drop fragments on the cross-origin redirect from the gallery port.
+      String raw = tokens.issue(user);
+      GallerySessionCookie.write(response, raw);
+      String token = URLEncoder.encode(raw, StandardCharsets.UTF_8);
       response.setHeader("Cache-Control", "no-store");
       response.sendRedirect(frontend("/auth/callback?token=" + token));
     } catch (ResponseStatusException exception) {

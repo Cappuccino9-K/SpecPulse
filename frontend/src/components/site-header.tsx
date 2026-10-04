@@ -15,7 +15,7 @@ const LINKS = [
 
 export function SiteHeader() {
   const path = usePathname();
-  const { session, logout } = useAuth();
+  const { session, ready, logout } = useAuth();
   const staff = session?.role === "ADMIN" || session?.role === "MODERATOR";
 
   return (
@@ -73,10 +73,12 @@ export function SiteHeader() {
                 <LogOut className="size-4" />
               </button>
             </div>
-          ) : (
+          ) : ready ? (
             <Link href="/login" className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary sm:text-sm">
               로그인
             </Link>
+          ) : (
+            <span className="h-8 w-16" />
           )}
           <ThemeToggle />
         </div>
