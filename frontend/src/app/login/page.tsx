@@ -1,18 +1,25 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import { LoginScreen } from "@/components/login-screen";
+import { fetchAuthConfig } from "@/lib/gallery";
+import type { AuthConfig } from "@/types/account";
 
-function LoginContent() {
-  const params = useSearchParams();
-  return <LoginScreen error={params.get("error") ?? undefined} />;
+export const dynamic = "force-dynamic";
+
+async function loadAuthConfig(): Promise<AuthConfig | null> {
+  try {
+    return await fetchAuthConfig();
+  } catch {
+    return null;
+  }
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<p className="p-6 text-sm text-muted">로그인 화면을 준비하는 중입니다.</p>}>
-      <LoginContent />
-    </Suspense>
-  );
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const raw = params.error;
+  const error = Array.isArray(raw) ? raw[0] : raw;
+  const initial = await loadAuthConfig();
+  return <LoginScreen error={error} initial={initial} />;
 }

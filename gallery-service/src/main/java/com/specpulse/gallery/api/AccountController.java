@@ -9,6 +9,8 @@ import com.specpulse.gallery.service.GalleryRequestService;
 import com.specpulse.gallery.service.GalleryService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api")
 public class AccountController {
+  private static final Logger log = LoggerFactory.getLogger(AccountController.class);
   private final GalleryProperties properties;
   private final AppUserRepository users;
   private final AccountService accounts;
@@ -43,8 +46,10 @@ public class AccountController {
 
   @GetMapping("/auth/config")
   AuthConfigView config() {
+    boolean enabled = properties.googleEnabled();
+    log.info("로그인 설정 요청: 구글 {}", enabled ? "사용" : "꺼짐");
     String base = properties.getPublicUrl() == null ? "http://127.0.0.1:18766" : properties.getPublicUrl().replaceAll("/$", "");
-    return new AuthConfigView(properties.googleEnabled(), base + "/oauth2/authorization/google");
+    return new AuthConfigView(enabled, base + "/oauth2/authorization/google");
   }
 
   @GetMapping("/me")

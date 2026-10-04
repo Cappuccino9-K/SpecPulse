@@ -21,9 +21,15 @@ async function fail(response: Response, fallback: string): Promise<never> {
   throw new Error(fallback);
 }
 
-async function request<T>(path: string, init?: RequestInit, fallback = "마이너갤 요청을 처리하지 못했습니다."): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  fallback = "마이너갤 요청을 처리하지 못했습니다.",
+  options?: { anonymous?: boolean },
+): Promise<T> {
   const headers = new Headers(init?.headers);
-  if (typeof window !== "undefined" && !headers.has("Authorization")) {
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  if (!options?.anonymous && typeof window !== "undefined" && !headers.has("Authorization")) {
     const token = localStorage.getItem("specpulse-gallery-token");
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
@@ -106,8 +112,27 @@ export function boardTime(iso: string | null): string {
   return new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit" }).format(date);
 }
 
-export function fetchAuthConfig(): Promise<AuthConfig> {
-  return request("/gallery-api/auth/config");
+const GALLERY_ORIGIN = "http://127.0.0.1:18766";
+
+export async function fetchAuthConfig(): Promise<AuthConfig> {
+  const stamp = Date.now();
+  const urls =
+    typeof window === "undefined"
+      ? [`${process.env.GALLERY_PROXY_TARGET ?? GALLERY_ORIGIN}/api/auth/config?fresh=${stamp}`]
+      : [`/gallery-api/auth/config?fresh=${stamp}`, `${GALLERY_ORIGIN}/api/auth/config?fresh=${stamp}`];
+  const results = await Promise.allSettled(
+    urls.map((url) =>
+      request<AuthConfig>(url, { headers: { Accept: "application/json" } }, "로그인 설정을 불러오지 못했습니다.", {
+        anonymous: true,
+      }),
+    ),
+  );
+  const configs = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+  const enabled = configs.find((config) => config.googleEnabled === true);
+  if (enabled) return enabled;
+  if (configs[0]) return configs[0];
+  const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  throw rejected?.reason instanceof Error ? rejected.reason : new Error("로그인 설정을 불러오지 못했습니다.");
 }
 
 export function openGallery(body: GalleryDraft): Promise<GalleryCard> {
