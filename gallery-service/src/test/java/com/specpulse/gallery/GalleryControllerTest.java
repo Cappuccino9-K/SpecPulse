@@ -14,18 +14,25 @@ import com.specpulse.gallery.api.GalleryCard;
 import com.specpulse.gallery.api.GalleryController;
 import com.specpulse.gallery.api.RecommendResult;
 import com.specpulse.gallery.service.GalleryService;
+import com.specpulse.gallery.security.GalleryJwtAuthentication;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan.Filter;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
-@WebMvcTest(controllers = GalleryController.class)
+@WebMvcTest(
+    controllers = GalleryController.class,
+    excludeFilters = @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = GalleryJwtAuthentication.class))
+@AutoConfigureMockMvc(addFilters = false)
 @Import(ApiExceptionHandler.class)
 class GalleryControllerTest {
   @Autowired private MockMvc mvc;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
+import { AuthProvider } from "@/components/auth-provider";
 import Script from "next/script";
 import "./globals.css";
 
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Script id="specpulse-theme" strategy="beforeInteractive">
           {themeBoot}
         </Script>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

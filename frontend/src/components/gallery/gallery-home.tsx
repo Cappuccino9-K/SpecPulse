@@ -1,13 +1,16 @@
 "use client";
 
-import { MessagesSquare, PenLine } from "lucide-react";
+import { MessagesSquare, PenLine, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { boardTime, fetchGalleries } from "@/lib/gallery";
 import type { GalleryCard } from "@/types/gallery";
 
 export function GalleryHome() {
+  const { session } = useAuth();
+  const staff = session?.role === "ADMIN" || session?.role === "MODERATOR";
   const [items, setItems] = useState<GalleryCard[] | null>(null);
   const [error, setError] = useState("");
 
@@ -25,8 +28,20 @@ export function GalleryHome() {
           <p className="text-xs font-semibold tracking-wide text-primary">MINOR GALLERY</p>
           <h1 className="text-2xl font-bold tracking-tight">마이너갤러리</h1>
           <p className="max-w-2xl text-sm text-muted">
-            부품별로 나뉜 게시판입니다. 닉네임과 글 비밀번호만으로 글을 남기고, 추천은 이 브라우저에서 한 번만 집계됩니다.
+            글과 댓글은 닉네임과 글 비밀번호만으로 남깁니다. 갤러리를 새로 여는 일만 구글 로그인과 역할이 필요합니다.
           </p>
+        </div>
+        <div className="mb-5 flex flex-wrap gap-2">
+          {session ? (
+            <Link href="/gallery/new" className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-on-primary">
+              <Plus className="size-4" />
+              {staff ? "갤러리 만들기" : "개설 요청"}
+            </Link>
+          ) : (
+            <Link href="/login" className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-medium">
+              로그인하고 갤러리 요청
+            </Link>
+          )}
         </div>
 
         {error ? (

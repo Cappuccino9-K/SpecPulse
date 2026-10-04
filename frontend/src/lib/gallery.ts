@@ -1,4 +1,5 @@
 import type { CommentView, GalleryCard, PostDetail, PostPage, RecommendResult } from "@/types/gallery";
+import type { AuthConfig, GalleryDraft, GalleryRequestItem, GalleryRole, Member } from "@/types/account";
 
 const CLIENT_KEY = "specpulse-gallery-client";
 
@@ -21,11 +22,19 @@ async function fail(response: Response, fallback: string): Promise<never> {
 }
 
 async function request<T>(path: string, init?: RequestInit, fallback = "마이너갤 요청을 처리하지 못했습니다."): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (typeof window !== "undefined" && !headers.has("Authorization")) {
+    const token = localStorage.getItem("specpulse-gallery-token");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
   let response: Response;
   try {
-    response = await fetch(path, { cache: "no-store", ...init });
+    response = await fetch(path, { cache: "no-store", ...init, headers });
   } catch {
     throw new Error("마이너갤 서버에 연결하지 못했습니다. JDK 17 이상이 있고 start.bat이 갤러리를 띄웠는지 확인해 주세요.");
+  }
+  if (response.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("specpulse-gallery-token");
   }
   if (!response.ok) return fail(response, fallback);
   if (response.status === 204) return undefined as T;
@@ -96,3 +105,56 @@ export function boardTime(iso: string | null): string {
   }
   return new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit" }).format(date);
 }
+
+export function fetchAuthConfig(): Promise<AuthConfig> {
+  return request("/gallery-api/auth/config");
+}
+
+export function openGallery(body: GalleryDraft): Promise<GalleryCard> {
+  return request("/gallery-api/galleries", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function requestGallery(body: GalleryDraft): Promise<GalleryRequestItem> {
+  return request("/gallery-api/gallery-requests", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchMyRequests(): Promise<GalleryRequestItem[]> {
+  return request("/gallery-api/gallery-requests/mine");
+}
+
+export function fetchRequestQueue(): Promise<GalleryRequestItem[]> {
+  return request("/gallery-api/gallery-requests");
+}
+
+export function approveRequest(id: number): Promise<GalleryRequestItem> {
+  return request(`/gallery-api/gallery-requests/${id}/approve`, { method: "POST" });
+}
+
+export function rejectRequest(id: number, note: string): Promise<GalleryRequestItem> {
+  return request(`/gallery-api/gallery-requests/${id}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ note }),
+  });
+}
+
+export function fetchMembers(): Promise<Member[]> {
+  return request("/gallery-api/members");
+}
+
+export function updateMemberRole(id: number, role: GalleryRole): Promise<Member> {
+  return request(`/gallery-api/members/${id}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+}
+

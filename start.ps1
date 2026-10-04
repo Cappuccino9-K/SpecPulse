@@ -313,6 +313,27 @@ if (-not (Test-Path $mvnw)) {
 
 $env:API_PROXY_TARGET = "http://127.0.0.1:18765"
 $env:GALLERY_PROXY_TARGET = "http://127.0.0.1:18766"
+$env:GALLERY_PUBLIC_URL = "http://127.0.0.1:18766"
+$env:GALLERY_FRONTEND_URL = "http://127.0.0.1:43721"
+$oauthFile = Join-Path $Root "gallery-service\google-oauth.json"
+if (Test-Path $oauthFile) {
+  try {
+    $oauth = Get-Content -Raw -Encoding UTF8 $oauthFile | ConvertFrom-Json
+    $node = $oauth.web
+    if (-not $node) { $node = $oauth.installed }
+    if ($node.client_id -and $node.client_secret) {
+      $env:GALLERY_GOOGLE_CLIENT_ID = [string]$node.client_id
+      $env:GALLERY_GOOGLE_CLIENT_SECRET = [string]$node.client_secret
+      Write-Host "구글 로그인 클라이언트를 읽었습니다. 시크릿은 화면에 출력하지 않습니다."
+    } else {
+      Write-Host "google-oauth.json 에 client_id 또는 client_secret 이 없습니다. 구글 로그인 없이 실행합니다."
+    }
+  } catch {
+    Write-Host "google-oauth.json 을 읽지 못했습니다. 구글 로그인 없이 실행합니다."
+  }
+} else {
+  Write-Host "구글 로그인을 쓰려면 클라이언트 JSON을 gallery-service\google-oauth.json 으로 저장하세요. 이 파일은 git에 올라가지 않습니다."
+}
 Write-Host "PostgreSQL 127.0.0.1:5432  스펙 API http://127.0.0.1:18765  마이너갤 http://127.0.0.1:18766  화면 http://127.0.0.1:43721"
 Write-Host "갤러리(Spring Boot)는 처음 실행 때 Maven 의존성을 받느라 1~2분 걸릴 수 있습니다."
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."

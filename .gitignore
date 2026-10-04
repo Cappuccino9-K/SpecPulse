@@ -8,6 +8,8 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .env
+gallery-service/google-oauth.json
+client_secret*.json
 *.db
 .DS_Store
 *.tsbuildinfo

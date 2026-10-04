@@ -22,7 +22,7 @@ public class WebConfig {
         registry
             .addMapping("/api/**")
             .allowedOrigins("http://127.0.0.1:43721", "http://localhost:43721")
-            .allowedMethods("GET", "POST", "OPTIONS")
+            .allowedMethods("GET", "POST", "PATCH", "OPTIONS")
             .allowedHeaders("*");
       }
     };

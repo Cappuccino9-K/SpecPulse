@@ -60,6 +60,20 @@ public class GalleryService {
     return toCard(requireGallery(slug));
   }
 
+  @Transactional
+  public GalleryCard openGallery(String name, String slug, String description) {
+    String cleanSlug = GallerySlugs.require(slug);
+    if (galleries.findBySlug(cleanSlug).isPresent()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 있는 갤러리 주소입니다.");
+    }
+    Gallery gallery = new Gallery();
+    gallery.setSlug(cleanSlug);
+    gallery.setName(name.trim());
+    gallery.setDescription(description.trim());
+    gallery.setCreatedAt(Instant.now());
+    return toCard(galleries.save(gallery));
+  }
+
   @Transactional(readOnly = true)
   public PostPage listPosts(String slug, int page, int size) {
     Gallery gallery = requireGallery(slug);

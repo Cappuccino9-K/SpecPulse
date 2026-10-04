@@ -1,0 +1,10 @@
+{
+  "web": {
+    "client_id": "웹-클라이언트-id.apps.googleusercontent.com",
+    "client_secret": "구글 클라우드에서 발급한 시크릿",
+    "redirect_uris": [
+      "http://127.0.0.1:18766/login/oauth2/code/google",
+      "http://localhost:18766/login/oauth2/code/google"
+    ]
+  }
+}
