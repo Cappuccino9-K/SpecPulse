@@ -319,11 +319,11 @@ $oauthFile = Join-Path $Root "gallery-service\google-oauth.json"
 if (Test-Path $oauthFile) {
   try {
     $oauth = Get-Content -Raw -Encoding UTF8 $oauthFile | ConvertFrom-Json
-    $node = $oauth.web
-    if (-not $node) { $node = $oauth.installed }
-    if ($node.client_id -and $node.client_secret) {
-      $env:GALLERY_GOOGLE_CLIENT_ID = [string]$node.client_id
-      $env:GALLERY_GOOGLE_CLIENT_SECRET = [string]$node.client_secret
+    $oauthClient = $oauth.web
+    if (-not $oauthClient) { $oauthClient = $oauth.installed }
+    if ($oauthClient.client_id -and $oauthClient.client_secret) {
+      $env:GALLERY_GOOGLE_CLIENT_ID = [string]$oauthClient.client_id
+      $env:GALLERY_GOOGLE_CLIENT_SECRET = [string]$oauthClient.client_secret
       Write-Host "구글 로그인 클라이언트를 읽었습니다. 시크릿은 화면에 출력하지 않습니다."
     } else {
       Write-Host "google-oauth.json 에 client_id 또는 client_secret 이 없습니다. 구글 로그인 없이 실행합니다."
