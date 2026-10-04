@@ -283,6 +283,12 @@ if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
   Pop-Location
 }
 
+$nextCache = Join-Path $Root "frontend\.next"
+if (Test-Path $nextCache) {
+  Write-Host "이전 화면 캐시를 지웁니다."
+  Remove-Item -Recurse -Force $nextCache
+}
+
 $node = $null
 if (Get-Command node.exe -ErrorAction SilentlyContinue) {
   $node = (Get-Command node.exe).Source
