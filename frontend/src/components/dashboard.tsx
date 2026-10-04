@@ -5,6 +5,7 @@ import { compareProducts, deleteComparison, fetchComparison, fetchHistory } from
 import { validateUrl } from "@/lib/utils";
 import type { CompareResponse, HistoryItem, Provider } from "@/types/analysis";
 import { BuyingGuide } from "@/components/buying-guide";
+import { ShareComparison } from "@/components/gallery/share-comparison";
 import { EmptyState } from "@/components/empty-state";
 import { HistoryRail } from "@/components/history-rail";
 import { LoadingState } from "@/components/loading-state";
@@ -80,14 +81,21 @@ export function Dashboard() {
 
   useEffect(() => {
     if (sampleStarted.current) return;
-    const sample = new URLSearchParams(window.location.search).get("sample");
+    const params = new URLSearchParams(window.location.search);
+    const sample = params.get("sample");
     const pair = sample ? SAMPLE_PAIRS[sample] : undefined;
-    if (!pair) return;
+    if (pair) {
+      sampleStarted.current = true;
+      setLeft(pair[0]);
+      setRight(pair[1]);
+      void submitPair(pair[0], pair[1], "local");
+      return;
+    }
+    const comparison = params.get("comparison");
+    if (!comparison) return;
     sampleStarted.current = true;
-    setLeft(pair[0]);
-    setRight(pair[1]);
-    void submitPair(pair[0], pair[1], "local");
-    // Preset query runs once on load; submitPair closes over the initial provider.
+    void openHistory(comparison);
+    // Preset and comparison links run once on load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -161,6 +169,7 @@ export function Dashboard() {
               <SpecCompareTable result={result} />
               <SentimentCards products={result.products} />
               <BuyingGuide result={result} />
+              <ShareComparison key={result.id ?? "unsaved"} result={result} />
             </>
           ) : null}
         </main>

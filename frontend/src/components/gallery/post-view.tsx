@@ -4,6 +4,7 @@ import { ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ComparisonExcerpt } from "@/components/gallery/comparison-excerpt";
 import { SiteHeader } from "@/components/site-header";
 import { boardTime, createComment, deleteComment, deletePost, fetchPost, recommendPost } from "@/lib/gallery";
 import type { PostDetail } from "@/types/gallery";
@@ -103,6 +104,7 @@ export function PostView({ slug, postId }: { slug: string; postId: number }) {
               {post.author} · {boardTime(post.createdAt)} · 조회 {post.views} · 추천 {post.recommends}
             </p>
             <p className="mt-5 whitespace-pre-wrap text-sm leading-7">{post.body}</p>
+            {post.comparisonId ? <ComparisonExcerpt comparisonId={post.comparisonId} /> : null}
             <button
               type="button"
               onClick={onRecommend}

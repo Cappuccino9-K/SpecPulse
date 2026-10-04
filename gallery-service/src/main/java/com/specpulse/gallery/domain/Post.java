@@ -46,6 +46,9 @@ public class Post {
   @Column(nullable = false)
   private Instant createdAt;
 
+  @Column(name = "comparison_id", length = 36)
+  private String comparisonId;
+
   public Long getId() {
     return id;
   }
@@ -112,5 +115,13 @@ public class Post {
 
   public void setCreatedAt(Instant createdAt) {
     this.createdAt = createdAt;
+  }
+
+  public String getComparisonId() {
+    return comparisonId;
+  }
+
+  public void setComparisonId(String comparisonId) {
+    this.comparisonId = comparisonId;
   }
 }

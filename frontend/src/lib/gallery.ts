@@ -65,7 +65,10 @@ export function fetchPost(id: number): Promise<PostDetail> {
   return request(`/gallery-api/posts/${id}`, { headers: { "X-Client-Id": galleryClientId() } });
 }
 
-export function createPost(slug: string, body: { author: string; password: string; title: string; body: string }): Promise<PostDetail> {
+export function createPost(
+  slug: string,
+  body: { author: string; password: string; title: string; body: string; comparisonId?: string },
+): Promise<PostDetail> {
   return request(`/gallery-api/galleries/${encodeURIComponent(slug)}/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

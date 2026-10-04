@@ -62,6 +62,17 @@ class GalleryControllerTest {
   }
 
   @Test
+  void rejectsBadComparisonId() throws Exception {
+    mvc.perform(
+            post("/api/galleries/cpu/posts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"author\":\"클럭\",\"password\":\"1234\",\"title\":\"제목입니다\",\"body\":\"본문입니다\",\"comparisonId\":\"not-a-uuid\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("비교 번호 형식이 아닙니다."));
+  }
+
+  @Test
   void recommendNeedsClientId() throws Exception {
     mvc.perform(post("/api/posts/3/recommend")).andExpect(status().isBadRequest());
   }

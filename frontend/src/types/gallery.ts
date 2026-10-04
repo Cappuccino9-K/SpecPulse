@@ -16,6 +16,7 @@ export type PostSummary = {
   views: number;
   recommends: number;
   commentCount: number;
+  comparisonId: string | null;
 };
 
 export type PostPage = {
@@ -45,6 +46,7 @@ export type PostDetail = {
   recommends: number;
   recommended: boolean;
   comments: CommentView[];
+  comparisonId: string | null;
 };
 
 export type RecommendResult = {

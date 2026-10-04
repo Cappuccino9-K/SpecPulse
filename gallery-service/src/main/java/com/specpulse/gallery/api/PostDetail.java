@@ -14,4 +14,5 @@ public record PostDetail(
     int views,
     int recommends,
     boolean recommended,
-    List<CommentView> comments) {}
+    List<CommentView> comments,
+    String comparisonId) {}

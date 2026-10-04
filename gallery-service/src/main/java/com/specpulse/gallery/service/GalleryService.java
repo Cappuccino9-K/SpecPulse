@@ -19,6 +19,7 @@ import com.specpulse.gallery.repo.PostRepository;
 import com.specpulse.gallery.repo.RecommendationRepository;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
@@ -97,6 +98,7 @@ public class GalleryService {
     post.setViews(0);
     post.setRecommends(0);
     post.setCreatedAt(Instant.now());
+    post.setComparisonId(cleanComparisonId(request.comparisonId()));
     posts.save(post);
     return toDetail(post, false);
   }
@@ -206,7 +208,8 @@ public class GalleryService {
         post.getCreatedAt(),
         post.getViews(),
         post.getRecommends(),
-        counts.getOrDefault(post.getId(), 0L));
+        counts.getOrDefault(post.getId(), 0L),
+        post.getComparisonId());
   }
 
   private PostDetail toDetail(Post post, boolean recommended) {
@@ -222,7 +225,17 @@ public class GalleryService {
         post.getViews(),
         post.getRecommends(),
         recommended,
-        thread);
+        thread,
+        post.getComparisonId());
+  }
+
+  private static String cleanComparisonId(String raw) {
+    if (raw == null || raw.isBlank()) return null;
+    try {
+      return UUID.fromString(raw.trim()).toString();
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비교 번호 형식이 아닙니다.");
+    }
   }
 
   private CommentView toComment(Comment comment) {

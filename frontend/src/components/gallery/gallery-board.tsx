@@ -93,6 +93,11 @@ export function GalleryBoard({ slug }: { slug: string }) {
                       <td className="px-3 py-2.5">
                         <Link href={`/gallery/${slug}/${post.id}`} className="font-medium hover:text-primary">
                           {post.title}
+                          {post.comparisonId ? (
+                            <span className="ml-1.5 inline-flex rounded-full bg-primary-container px-1.5 py-0.5 align-middle text-[10px] font-semibold text-on-primary-container">
+                              비교
+                            </span>
+                          ) : null}
                           {post.commentCount > 0 ? <span className="ml-1 text-primary">[{post.commentCount}]</span> : null}
                         </Link>
                       </td>
@@ -112,6 +117,11 @@ export function GalleryBoard({ slug }: { slug: string }) {
                   <Link href={`/gallery/${slug}/${post.id}`} className="block rounded-2xl border border-line bg-surface p-3">
                     <p className="font-medium">
                       {post.title}
+                      {post.comparisonId ? (
+                        <span className="ml-1.5 inline-flex rounded-full bg-primary-container px-1.5 py-0.5 align-middle text-[10px] font-semibold text-on-primary-container">
+                          비교
+                        </span>
+                      ) : null}
                       {post.commentCount > 0 ? <span className="ml-1 text-primary">[{post.commentCount}]</span> : null}
                     </p>
                     <p className="mt-1 text-xs text-muted">
