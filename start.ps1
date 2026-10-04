@@ -16,6 +16,57 @@ function Stop-Tree([System.Diagnostics.Process] $Process) {
   }
 }
 
+function Get-ListeningPids([int] $Port) {
+  $found = New-Object System.Collections.Generic.List[int]
+  $netstat = Join-Path $env:SystemRoot "System32\netstat.exe"
+  if (-not (Test-Path $netstat)) { return $found }
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $lines = & $netstat -ano -p tcp
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+  foreach ($line in $lines) {
+    if ($line -match ":$Port\s+\S+\s+\S+\s+(\d+)\s*$") {
+      $procId = [int]$Matches[1]
+      if ($procId -gt 4) { $found.Add($procId) }
+    }
+  }
+  return $found
+}
+
+function Stop-SpecPulsePorts {
+  $ports = @(18765, 18766, 43721)
+  $taskkill = Join-Path $env:SystemRoot "System32\taskkill.exe"
+  $targets = New-Object System.Collections.Generic.HashSet[int]
+  foreach ($port in $ports) {
+    foreach ($procId in (Get-ListeningPids $port)) {
+      [void]$targets.Add($procId)
+    }
+  }
+  if ($targets.Count -eq 0) { return }
+  Write-Host "이전에 켜 둔 SpecPulse가 포트를 사용 중이라 종료합니다."
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    foreach ($procId in $targets) {
+      & $taskkill /PID $procId /T /F 2>$null | Out-Null
+    }
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+  for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    $busy = @()
+    foreach ($port in $ports) {
+      if ((Get-ListeningPids $port).Count -gt 0) { $busy += $port }
+    }
+    if ($busy.Count -eq 0) { return }
+    Start-Sleep -Milliseconds 500
+  }
+  throw "18765, 18766, 43721 포트를 비우지 못했습니다. 그 포트를 쓰는 프로그램을 종료한 뒤 start.bat을 다시 실행하세요."
+}
+
 function Find-Java {
   $candidates = @()
   if ($env:JAVA_HOME) {
@@ -282,6 +333,8 @@ if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
   if ($LASTEXITCODE -ne 0) { throw "npm install에 실패했습니다." }
   Pop-Location
 }
+
+Stop-SpecPulsePorts
 
 $nextCache = Join-Path $Root "frontend\.next"
 if (Test-Path $nextCache) {
