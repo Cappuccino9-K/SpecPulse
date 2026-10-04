@@ -26,9 +26,12 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import com.specpulse.gallery.security.GalleryAuthEntryPoint;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -108,18 +111,15 @@ public class SecurityConfig {
       BearerTokenResolver galleryBearerTokenResolver,
       GoogleLoginHandler googleLogin)
       throws Exception {
+    AuthenticationEntryPoint entryPoint = new GalleryAuthEntryPoint();
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(Customizer.withDefaults())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+        .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
         .exceptionHandling(
             errors ->
                 errors
-                    .authenticationEntryPoint(
-                        (request, response, exception) -> {
-                          response.setStatus(401);
-                          response.setContentType("application/json;charset=UTF-8");
-                          response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
-                        })
+                    .authenticationEntryPoint(entryPoint)
                     .accessDeniedHandler(
                         (request, response, exception) -> {
                           response.setStatus(403);
@@ -145,6 +145,7 @@ public class SecurityConfig {
         .oauth2ResourceServer(
             oauth ->
                 oauth
+                    .authenticationEntryPoint(entryPoint)
                     .bearerTokenResolver(galleryBearerTokenResolver)
                     .jwt(jwt -> jwt.decoder(galleryJwtDecoder).jwtAuthenticationConverter(jwtAuthentication)));
 

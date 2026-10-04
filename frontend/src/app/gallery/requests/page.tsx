@@ -28,11 +28,24 @@ export default function GalleryRequestsPage() {
   }
 
   useEffect(() => {
-    if (!ready || !session) return;
-    load();
-    // load depends on the current role after login.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, session?.role]);
+    if (!ready || !session) {
+      setItems(null);
+      setError("");
+      return;
+    }
+    let alive = true;
+    const task = staff ? fetchRequestQueue() : fetchMyRequests();
+    task
+      .then((next) => {
+        if (alive) setItems(next);
+      })
+      .catch((reason: unknown) => {
+        if (alive) setError(reason instanceof Error ? reason.message : "요청을 불러오지 못했습니다.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [ready, staff, session]);
 
   async function approve(id: number) {
     setError("");
@@ -61,9 +74,13 @@ export default function GalleryRequestsPage() {
         <Link href="/gallery" className="text-xs font-medium text-primary">
           마이너갤
         </Link>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">{staff ? "개설 요청" : "내 요청"}</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">{!ready ? "요청" : staff ? "개설 요청" : "내 요청"}</h1>
         <p className="mt-1 text-sm text-muted">
-          {staff ? "대기 중인 요청만 보입니다. 승인하면 갤러리가 바로 열립니다." : "요청 상태입니다. 글쓰기는 승인과 관계없이 열린 갤러리에서 할 수 있습니다."}
+          {!ready
+            ? "로그인 상태를 확인하는 중입니다."
+            : staff
+              ? "대기 중인 요청만 보입니다. 승인하면 갤러리가 바로 열립니다."
+              : "요청 상태입니다. 글쓰기는 승인과 관계없이 열린 갤러리에서 할 수 있습니다."}
         </p>
         {ready && !session ? (
           <p className="mt-4 text-sm">
@@ -73,7 +90,7 @@ export default function GalleryRequestsPage() {
             이 필요합니다.
           </p>
         ) : null}
-        {error ? (
+        {error && session ? (
           <p role="alert" className="mt-4 rounded-2xl border border-danger/30 bg-danger-container px-4 py-3 text-sm text-on-danger-container">
             {error}
           </p>

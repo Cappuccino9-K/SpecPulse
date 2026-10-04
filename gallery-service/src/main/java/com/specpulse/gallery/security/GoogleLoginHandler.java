@@ -34,7 +34,9 @@ public class GoogleLoginHandler implements AuthenticationSuccessHandler, Authent
     try {
       AppUser user = accounts.upsertFromGoogle((OAuth2User) authentication.getPrincipal());
       String token = URLEncoder.encode(tokens.issue(user), StandardCharsets.UTF_8);
-      response.sendRedirect(frontend("/auth/callback#token=" + token));
+      // Query, not a hash: browsers drop fragments on the cross-origin redirect from the gallery port.
+      response.setHeader("Cache-Control", "no-store");
+      response.sendRedirect(frontend("/auth/callback?token=" + token));
     } catch (ResponseStatusException exception) {
       String message = exception.getReason() == null ? "구글 로그인을 끝내지 못했습니다." : exception.getReason();
       response.sendRedirect(frontend("/login?error=" + URLEncoder.encode(message, StandardCharsets.UTF_8)));

@@ -1,6 +1,6 @@
 import type { CommentView, GalleryCard, PostDetail, PostPage, RecommendResult } from "@/types/gallery";
 import type { AuthConfig, GalleryDraft, GalleryRequestItem, GalleryRole, Member } from "@/types/account";
-import { notifySession, TOKEN_KEY } from "@/lib/session";
+import { clearToken, currentToken } from "@/lib/session";
 
 const CLIENT_KEY = "specpulse-gallery-client";
 
@@ -31,7 +31,7 @@ async function request<T>(
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   if (options?.authenticated && typeof window !== "undefined" && !headers.has("Authorization")) {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = currentToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
   let response: Response;
@@ -41,10 +41,12 @@ async function request<T>(
     throw new Error("마이너갤 서버에 연결하지 못했습니다. JDK 17 이상이 있고 start.bat이 갤러리를 띄웠는지 확인해 주세요.");
   }
   if (response.status === 401 && options?.authenticated && typeof window !== "undefined") {
-    localStorage.removeItem(TOKEN_KEY);
-    notifySession();
+    clearToken();
   }
-  if (!response.ok) return fail(response, fallback);
+  if (!response.ok) {
+    const authFallback = response.status === 401 ? "로그인이 만료되었습니다. 다시 로그인해 주세요." : fallback;
+    return fail(response, authFallback);
+  }
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   if (!text) return undefined as T;
@@ -133,6 +135,10 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
   if (configs[0]) return configs[0];
   const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
   throw rejected?.reason instanceof Error ? rejected.reason : new Error("로그인 설정을 불러오지 못했습니다.");
+}
+
+export function fetchMe(): Promise<{ id: number; email: string; name: string; picture: string | null; role: GalleryRole }> {
+  return request("/gallery-api/me", undefined, "로그인이 필요합니다.", { authenticated: true });
 }
 
 export function openGallery(body: GalleryDraft): Promise<GalleryCard> {

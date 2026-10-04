@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { readSession, SESSION_EVENT, TOKEN_KEY, type Session } from "@/lib/session";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { fetchMe } from "@/lib/gallery";
+import { clearToken, readSession, serverSession, SESSION_EVENT, subscribeSession, type Session } from "@/lib/session";
 
 type AuthValue = {
   session: Session | null;
@@ -13,22 +14,36 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const session = useSyncExternalStore(subscribeSession, readSession, serverSession);
   const [ready, setReady] = useState(false);
 
-  function refresh() {
-    setSession(readSession());
-    setReady(true);
-  }
-
   useEffect(() => {
-    refresh();
-    const sync = () => refresh();
-    window.addEventListener(SESSION_EVENT, sync);
-    window.addEventListener("focus", sync);
+    let alive = true;
+    let checking = false;
+    const confirm = async () => {
+      if (checking) return;
+      if (!readSession()) {
+        if (alive) setReady(true);
+        return;
+      }
+      checking = true;
+      try {
+        await fetchMe();
+      } catch {
+        // A rejected token is already cleared. Other failures keep the local session.
+      } finally {
+        checking = false;
+      }
+      if (alive) setReady(true);
+    };
+    void confirm();
+    const onSession = () => {
+      void confirm();
+    };
+    window.addEventListener(SESSION_EVENT, onSession);
     return () => {
-      window.removeEventListener(SESSION_EVENT, sync);
-      window.removeEventListener("focus", sync);
+      alive = false;
+      window.removeEventListener(SESSION_EVENT, onSession);
     };
   }, []);
 
@@ -36,10 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       ready,
-      refresh,
+      refresh: () => {
+        readSession();
+      },
       logout: () => {
-        localStorage.removeItem(TOKEN_KEY);
-        setSession(null);
+        clearToken();
       },
     }),
     [session, ready],
