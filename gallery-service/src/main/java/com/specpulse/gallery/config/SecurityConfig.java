@@ -3,6 +3,9 @@ package com.specpulse.gallery.config;
 import com.specpulse.gallery.security.GalleryJwtAuthentication;
 import com.specpulse.gallery.security.GalleryTokens;
 import com.specpulse.gallery.security.GoogleLoginHandler;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
@@ -23,6 +26,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -36,12 +41,46 @@ public class SecurityConfig {
   SecretKey galleryJwtKey(GalleryProperties properties) {
     String raw = properties.getJwtSecret();
     if (raw == null || raw.isBlank()) {
-      byte[] bytes = new byte[32];
-      new SecureRandom().nextBytes(bytes);
-      raw = Base64.getEncoder().encodeToString(bytes);
-      log.warn("GALLERY_JWT_SECRET이 없습니다. 이번 실행에서만 유효한 로그인 키를 만들었습니다. 서버를 다시 시작하면 로그인도 다시 해야 합니다.");
+      raw = storedJwtSecret();
     }
     return GalleryTokens.key(raw);
+  }
+
+  private static String storedJwtSecret() {
+    Path file = Path.of(".jwt-secret");
+    try {
+      if (Files.isRegularFile(file)) {
+        String saved = Files.readString(file).trim();
+        if (!saved.isBlank()) return saved;
+      }
+      byte[] bytes = new byte[32];
+      new SecureRandom().nextBytes(bytes);
+      String created = Base64.getEncoder().encodeToString(bytes);
+      Files.writeString(file, created);
+      log.info("로그인 키를 gallery-service/.jwt-secret 에 저장했습니다. 서버를 다시 켜도 로그인이 유지됩니다.");
+      return created;
+    } catch (IOException exception) {
+      byte[] bytes = new byte[32];
+      new SecureRandom().nextBytes(bytes);
+      log.warn("로그인 키 파일을 만들지 못했습니다. 서버를 다시 시작하면 로그인도 다시 해야 합니다.");
+      return Base64.getEncoder().encodeToString(bytes);
+    }
+  }
+
+  @Bean
+  BearerTokenResolver galleryBearerTokenResolver() {
+    DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+    return request -> {
+      String path = request.getRequestURI();
+      String method = request.getMethod();
+      boolean accountRequest =
+          ("POST".equals(method) && "/api/galleries".equals(path))
+              || path.startsWith("/api/gallery-requests")
+              || path.startsWith("/api/members")
+              || "/api/me".equals(path);
+      if (!accountRequest) return null;
+      return delegate.resolve(request);
+    };
   }
 
   @Bean
@@ -66,6 +105,7 @@ public class SecurityConfig {
       ObjectProvider<ClientRegistrationRepository> clients,
       GalleryJwtAuthentication jwtAuthentication,
       JwtDecoder galleryJwtDecoder,
+      BearerTokenResolver galleryBearerTokenResolver,
       GoogleLoginHandler googleLogin)
       throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
@@ -102,7 +142,11 @@ public class SecurityConfig {
                     .authenticated()
                     .anyRequest()
                     .permitAll())
-        .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.decoder(galleryJwtDecoder).jwtAuthenticationConverter(jwtAuthentication)));
+        .oauth2ResourceServer(
+            oauth ->
+                oauth
+                    .bearerTokenResolver(galleryBearerTokenResolver)
+                    .jwt(jwt -> jwt.decoder(galleryJwtDecoder).jwtAuthenticationConverter(jwtAuthentication)));
 
     if (clients.getIfAvailable() != null) {
       http.oauth2Login(

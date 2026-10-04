@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 .env
 gallery-service/google-oauth.json
+gallery-service/.jwt-secret
 client_secret*.json
 *.db
 .DS_Store

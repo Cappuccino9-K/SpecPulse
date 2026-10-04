@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { TOKEN_KEY } from "@/lib/session";
+import { notifySession, TOKEN_KEY } from "@/lib/session";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -15,7 +15,8 @@ export default function AuthCallbackPage() {
       setMessage("로그인 토큰을 받지 못했습니다.");
       return;
     }
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(TOKEN_KEY, token.trim());
+    notifySession();
     router.replace("/gallery");
   }, [router]);
 

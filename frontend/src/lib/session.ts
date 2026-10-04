@@ -14,20 +14,26 @@ export function roleLabel(role: GalleryRole): string {
   return "사용자";
 }
 
+export const SESSION_EVENT = "specpulse-session";
+
+export function notifySession() {
+  window.dispatchEvent(new Event(SESSION_EVENT));
+}
+
+function decodePart(part: string): { name?: string; email?: string; role?: string; exp?: number } {
+  const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes)) as { name?: string; email?: string; role?: string; exp?: number };
+}
+
 export function readSession(): Session | null {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY)?.trim();
   if (!token) return null;
   try {
     const part = token.split(".")[1];
     if (!part) throw new Error("empty");
-    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
-    const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
-    const payload = JSON.parse(new TextDecoder().decode(bytes)) as {
-      name?: string;
-      email?: string;
-      role?: string;
-      exp?: number;
-    };
+    const payload = decodePart(part);
     if (!payload.exp || payload.exp * 1000 <= Date.now()) {
       localStorage.removeItem(TOKEN_KEY);
       return null;

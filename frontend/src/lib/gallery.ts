@@ -1,5 +1,6 @@
 import type { CommentView, GalleryCard, PostDetail, PostPage, RecommendResult } from "@/types/gallery";
 import type { AuthConfig, GalleryDraft, GalleryRequestItem, GalleryRole, Member } from "@/types/account";
+import { notifySession, TOKEN_KEY } from "@/lib/session";
 
 const CLIENT_KEY = "specpulse-gallery-client";
 
@@ -25,12 +26,12 @@ async function request<T>(
   path: string,
   init?: RequestInit,
   fallback = "마이너갤 요청을 처리하지 못했습니다.",
-  options?: { anonymous?: boolean },
+  options?: { authenticated?: boolean },
 ): Promise<T> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
-  if (!options?.anonymous && typeof window !== "undefined" && !headers.has("Authorization")) {
-    const token = localStorage.getItem("specpulse-gallery-token");
+  if (options?.authenticated && typeof window !== "undefined" && !headers.has("Authorization")) {
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
   let response: Response;
@@ -39,8 +40,9 @@ async function request<T>(
   } catch {
     throw new Error("마이너갤 서버에 연결하지 못했습니다. JDK 17 이상이 있고 start.bat이 갤러리를 띄웠는지 확인해 주세요.");
   }
-  if (response.status === 401 && typeof window !== "undefined") {
-    localStorage.removeItem("specpulse-gallery-token");
+  if (response.status === 401 && options?.authenticated && typeof window !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+    notifySession();
   }
   if (!response.ok) return fail(response, fallback);
   if (response.status === 204) return undefined as T;
@@ -122,9 +124,7 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
       : [`/gallery-api/auth/config?fresh=${stamp}`, `${GALLERY_ORIGIN}/api/auth/config?fresh=${stamp}`];
   const results = await Promise.allSettled(
     urls.map((url) =>
-      request<AuthConfig>(url, { headers: { Accept: "application/json" } }, "로그인 설정을 불러오지 못했습니다.", {
-        anonymous: true,
-      }),
+      request<AuthConfig>(url, { headers: { Accept: "application/json" } }, "로그인 설정을 불러오지 못했습니다."),
     ),
   );
   const configs = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
@@ -140,7 +140,7 @@ export function openGallery(body: GalleryDraft): Promise<GalleryCard> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function requestGallery(body: GalleryDraft): Promise<GalleryRequestItem> {
@@ -148,19 +148,19 @@ export function requestGallery(body: GalleryDraft): Promise<GalleryRequestItem> 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function fetchMyRequests(): Promise<GalleryRequestItem[]> {
-  return request("/gallery-api/gallery-requests/mine");
+  return request("/gallery-api/gallery-requests/mine", undefined, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function fetchRequestQueue(): Promise<GalleryRequestItem[]> {
-  return request("/gallery-api/gallery-requests");
+  return request("/gallery-api/gallery-requests", undefined, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function approveRequest(id: number): Promise<GalleryRequestItem> {
-  return request(`/gallery-api/gallery-requests/${id}/approve`, { method: "POST" });
+  return request(`/gallery-api/gallery-requests/${id}/approve`, { method: "POST" }, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function rejectRequest(id: number, note: string): Promise<GalleryRequestItem> {
@@ -168,11 +168,11 @@ export function rejectRequest(id: number, note: string): Promise<GalleryRequestI
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ note }),
-  });
+  }, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function fetchMembers(): Promise<Member[]> {
-  return request("/gallery-api/members");
+  return request("/gallery-api/members", undefined, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 
 export function updateMemberRole(id: number, role: GalleryRole): Promise<Member> {
@@ -180,6 +180,6 @@ export function updateMemberRole(id: number, role: GalleryRole): Promise<Member>
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ role }),
-  });
+  }, "마이너갤 요청을 처리하지 못했습니다.", { authenticated: true });
 }
 

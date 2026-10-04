@@ -321,6 +321,14 @@ $env:API_PROXY_TARGET = "http://127.0.0.1:18765"
 $env:GALLERY_PROXY_TARGET = "http://127.0.0.1:18766"
 $env:GALLERY_PUBLIC_URL = "http://127.0.0.1:18766"
 $env:GALLERY_FRONTEND_URL = "http://127.0.0.1:43721"
+$jwtFile = Join-Path $Root "gallery-service\.jwt-secret"
+if (-not (Test-Path $jwtFile)) {
+  $bytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+  [Convert]::ToBase64String($bytes) | Set-Content -Path $jwtFile -Encoding ascii -NoNewline
+  Write-Host "로그인 키를 만들었습니다. gallery-service\.jwt-secret 은 git에 올리지 않습니다."
+}
+$env:GALLERY_JWT_SECRET = (Get-Content -Raw -Encoding ASCII $jwtFile).Trim()
 $oauthFile = Join-Path $Root "gallery-service\google-oauth.json"
 if (Test-Path $oauthFile) {
   try {

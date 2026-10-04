@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { readSession, TOKEN_KEY, type Session } from "@/lib/session";
+import { readSession, SESSION_EVENT, TOKEN_KEY, type Session } from "@/lib/session";
 
 type AuthValue = {
   session: Session | null;
@@ -23,6 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
+    const sync = () => refresh();
+    window.addEventListener(SESSION_EVENT, sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener(SESSION_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
   }, []);
 
   const value = useMemo<AuthValue>(
