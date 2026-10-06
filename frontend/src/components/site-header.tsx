@@ -9,7 +9,7 @@ import { roleLabel } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { href: "/", label: "스펙 비교" },
+  { href: "/compare", label: "스펙 비교" },
   { href: "/gallery", label: "마이너갤" },
 ];
 
@@ -33,7 +33,7 @@ export function SiteHeader() {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <nav className="flex items-center rounded-full bg-surface-container p-1" aria-label="주요">
             {LINKS.map((link) => {
-              const active = link.href === "/" ? path === "/" : path.startsWith(link.href);
+              const active = path === link.href || path.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}

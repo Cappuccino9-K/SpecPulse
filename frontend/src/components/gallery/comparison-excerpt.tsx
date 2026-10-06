@@ -51,7 +51,7 @@ export function ComparisonExcerpt({ comparisonId }: { comparisonId: string }) {
               ))}
             </ul>
           ) : null}
-          <Link href={`/?comparison=${encodeURIComponent(comparisonId)}`} className="mt-3 inline-block text-sm font-semibold text-primary">
+          <Link href={`/compare?comparison=${encodeURIComponent(comparisonId)}`} className="mt-3 inline-block text-sm font-semibold text-primary">
             비교 화면에서 다시 보기
           </Link>
         </>

@@ -74,7 +74,7 @@ export GALLERY_DB_PASSWORD='설치할 때 정한 비밀번호'
 
 처음 기동하면 CPU, 그래픽카드, 노트북, 메모리 갤러리와 예시 글이 비어 있을 때만 들어갑니다. 예시 글의 비밀번호는 실행할 때마다 임의 값으로 해시하므로 공개된 비밀번호로 지울 수 없습니다.
 
-샘플 칩(노트북, 태블릿, 그래픽카드)은 `demo.specpulse.app` 주소로 보이지만, 서버가 들고 있는 데모 페이지를 읽습니다. 원문 페이지 링크로 HTML을 직접 볼 수 있습니다. `/?sample=laptops`, `/?sample=tablets`, `/?sample=gpus` 로 열면 해당 샘플 비교가 바로 시작됩니다.
+샘플 칩(노트북, 태블릿, 그래픽카드)은 `demo.specpulse.app` 주소로 보이지만, 서버가 들고 있는 데모 페이지를 읽습니다. 원문 페이지 링크로 HTML을 직접 볼 수 있습니다. `/compare?sample=laptops`, `/compare?sample=tablets`, `/compare?sample=gpus` 로 열면 해당 샘플 비교가 바로 시작됩니다.
 
 화면 시안은 Figma 파일 [SpecPulse](https://www.figma.com/design/mu5BBjBv8DyF3f7MseVMu3)에 있습니다.
 
