@@ -326,13 +326,11 @@ if (Get-Command npm.cmd -ErrorAction SilentlyContinue) {
   throw "Node.js가 필요합니다. https://nodejs.org 에서 LTS를 설치하세요."
 }
 
-if (-not (Test-Path (Join-Path $Root "frontend\node_modules"))) {
-  Write-Host "프론트엔드 패키지를 설치합니다."
-  Push-Location (Join-Path $Root "frontend")
-  & $npm install
-  if ($LASTEXITCODE -ne 0) { throw "npm install에 실패했습니다." }
-  Pop-Location
-}
+Write-Host "프론트엔드 패키지를 확인합니다. 새로 받은 라이브러리가 있으면 설치합니다."
+Push-Location (Join-Path $Root "frontend")
+& $npm install
+if ($LASTEXITCODE -ne 0) { throw "npm install에 실패했습니다." }
+Pop-Location
 
 Stop-SpecPulsePorts
 
