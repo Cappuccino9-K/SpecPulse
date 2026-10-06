@@ -208,13 +208,13 @@ export function LandingPage() {
           muted
           loop
           playsInline
-          poster="/landing/poster.jpg"
+          poster="/landing/poster.jpg?v=2"
           preload="auto"
           aria-label="SpecPulse 소개 영상. 그래픽카드 두 장의 스펙이 나란히 비교되고, 구매 가이드와 마이너갤 글로 이어집니다."
           onPlay={() => setPaused(false)}
           onPause={() => setPaused(true)}
         >
-          <source src="/landing/hero.mp4" type="video/mp4" />
+          <source src="/landing/hero.mp4?v=2" type="video/mp4" />
         </video>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#070B16]/70 via-transparent to-[#070B16]" />
         <div data-hero-copy className="absolute inset-x-0 bottom-0 z-10 px-4 pb-10 sm:px-8">
