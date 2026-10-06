@@ -188,7 +188,6 @@ export function PostView({ slug, postId }: { slug: string; postId: number }) {
 
             <form onSubmit={onDeletePost} className="rounded-2xl border border-line bg-surface p-4">
               <p className="text-sm font-medium">글 삭제</p>
-              <p className="mt-1 text-xs text-muted">글을 쓸 때 넣은 비밀번호가 맞아야 지워집니다.</p>
               <div className="mt-2 flex gap-2">
                 <input
                   type="password"

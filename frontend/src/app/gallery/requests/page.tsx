@@ -75,13 +75,7 @@ export default function GalleryRequestsPage() {
           마이너갤
         </Link>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">{!ready ? "요청" : staff ? "개설 요청" : "내 요청"}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {!ready
-            ? "로그인 상태를 확인하는 중입니다."
-            : staff
-              ? "대기 중인 요청만 보입니다. 승인하면 갤러리가 바로 열립니다."
-              : "요청 상태입니다. 글쓰기는 승인과 관계없이 열린 갤러리에서 할 수 있습니다."}
-        </p>
+        {!ready ? <p className="mt-1 text-sm text-muted">로그인 상태를 확인하는 중입니다.</p> : null}
         {ready && !session ? (
           <p className="mt-4 text-sm">
             <Link href="/login" className="text-primary">

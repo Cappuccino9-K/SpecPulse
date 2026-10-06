@@ -108,9 +108,6 @@ export function ShareComparison({ result }: { result: CompareResponse }) {
     <section className="rise overflow-hidden rounded-2xl border border-line bg-surface elev-1">
       <div className="border-l-4 border-primary px-5 py-5 sm:px-6">
         <h2 className="text-sm font-semibold">{galleryName}에 이 비교 남기기</h2>
-        <p className="mt-1 text-xs leading-5 text-muted">
-          글에는 비교 번호만 남습니다. 스펙은 글에서 비교 화면을 다시 열어 확인합니다. 구글 로그인 없이 닉네임과 글 비밀번호만 있으면 됩니다.
-        </p>
 
         {loadError ? (
           <p role="alert" className="mt-3 text-sm text-danger">

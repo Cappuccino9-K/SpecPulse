@@ -9,7 +9,6 @@ export function SpecCompareTable({ result }: { result: CompareResponse }) {
       <div className="flex items-end justify-between gap-3 border-b border-line px-4 py-4 sm:px-5">
         <div>
           <h2 className="text-base font-semibold tracking-tight">핵심 스펙 비교</h2>
-          <p className="mt-1 text-xs text-muted">페이지에서 읽은 스펙을 같은 항목끼리 맞춥니다. 초록 칸은 수치 우위입니다.</p>
         </div>
       </div>
 

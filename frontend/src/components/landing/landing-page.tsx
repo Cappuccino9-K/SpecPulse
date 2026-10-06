@@ -218,13 +218,7 @@ export function LandingPage() {
         </video>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#070B16]/70 via-transparent to-[#070B16]" />
         <div data-hero-copy className="absolute inset-x-0 bottom-0 z-10 px-4 pb-10 sm:px-8">
-          <div className="mx-auto flex max-w-6xl items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-[#9db7ff]">10초</p>
-              <p className="mt-2 max-w-md text-lg font-semibold leading-7 sm:text-2xl">
-                주소 두 개가 구매 가이드가 되고, 그 비교가 갤러리 글이 됩니다.
-              </p>
-            </div>
+          <div className="mx-auto flex max-w-6xl items-end justify-end gap-4">
             <div className="mb-1 flex items-center gap-3">
               <a href="#story" data-cue className="hidden items-center gap-2 text-xs text-white/70 sm:inline-flex">
                 스크롤
@@ -250,9 +244,6 @@ export function LandingPage() {
             <h2 className="mt-3 max-w-xl text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
               상품 페이지 주소를 그대로 붙입니다
             </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-              스펙 표가 있는 페이지면 됩니다. 클럭, 코어, 용량, 전력처럼 같은 항목만 한 줄로 맞춥니다.
-            </p>
           </div>
           <div data-urls className="mt-10 grid gap-3 md:grid-cols-2">
             <p data-url className="truncate rounded-2xl border border-white/10 bg-white/5 px-4 py-4 font-mono text-xs text-white/80 sm:text-sm">
@@ -312,9 +303,6 @@ export function LandingPage() {
           <div data-block>
             <p className="text-xs font-semibold tracking-[0.18em] text-[#9db7ff]">03 가이드</p>
             <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">살 이유를 한 문장으로 줄입니다</h2>
-            <p className="mt-4 text-sm leading-7 text-white/70 sm:text-base">
-              리뷰에서 장점과 추천 대상을 가려, 어느 쪽에 돈이 맞는지 적습니다. 숫자는 표에 남고, 문장은 가이드에 남습니다.
-            </p>
           </div>
           <blockquote data-block className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
             <p className="text-xs font-semibold text-[#9db7ff]">AI 종합 구매 가이드</p>
@@ -337,16 +325,10 @@ export function LandingPage() {
             <p data-post-line className="mt-3 text-sm leading-6 text-white/75">
               1440p에는 DLSS가 있는 쪽이 맞습니다. 용량을 더 보면 16GB.
             </p>
-            <p data-post-line className="mt-4 text-xs text-white/45">
-              닉네임 · 글 비밀번호 · 비교 번호만 저장
-            </p>
           </article>
           <div data-block>
             <p className="text-xs font-semibold tracking-[0.18em] text-[#9db7ff]">04 갤러리</p>
             <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">그 비교는 마이너갤 글이 됩니다</h2>
-            <p className="mt-4 text-sm leading-7 text-white/70 sm:text-base">
-              글에는 비교 번호만 남습니다. 스펙은 글에서 다시 읽고, 구글 로그인 없이 닉네임과 글 비밀번호만으로 올릴 수 있습니다.
-            </p>
           </div>
         </section>
 
@@ -354,9 +336,6 @@ export function LandingPage() {
           <h2 data-cta className="text-3xl font-bold tracking-tight sm:text-5xl">
             두 주소만 있으면 됩니다
           </h2>
-          <p data-cta className="mx-auto mt-4 max-w-lg text-sm leading-7 text-white/70">
-            그래픽카드 샘플로 바로 비교하거나, 빈 화면에서 주소를 붙이세요.
-          </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               data-cta

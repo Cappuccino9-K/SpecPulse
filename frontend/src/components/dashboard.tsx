@@ -6,7 +6,6 @@ import { validateUrl } from "@/lib/utils";
 import type { CompareResponse, HistoryItem, Provider } from "@/types/analysis";
 import { BuyingGuide } from "@/components/buying-guide";
 import { ShareComparison } from "@/components/gallery/share-comparison";
-import { EmptyState } from "@/components/empty-state";
 import { HistoryRail } from "@/components/history-rail";
 import { LoadingState } from "@/components/loading-state";
 import { SentimentCards } from "@/components/sentiment-cards";
@@ -163,7 +162,6 @@ export function Dashboard() {
           ) : null}
 
           {status === "loading" ? <LoadingState step={step} /> : null}
-          {status !== "loading" && !result ? <EmptyState /> : null}
           {status !== "loading" && result ? (
             <>
               <SpecCompareTable result={result} />

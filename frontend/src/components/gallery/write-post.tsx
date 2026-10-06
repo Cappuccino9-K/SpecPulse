@@ -37,7 +37,6 @@ export function WritePost({ slug }: { slug: string }) {
           목록으로
         </Link>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">글쓰기</h1>
-        <p className="mt-1 text-sm text-muted">비밀번호는 글을 지울 때만 쓰입니다. 서버는 해시만 저장합니다.</p>
         <form onSubmit={onSubmit} className="mt-5 space-y-3 rounded-2xl border border-line bg-surface p-4 elev-1 sm:p-6">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="닉네임" value={author} onChange={setAuthor} maxLength={16} autoComplete="nickname" />

@@ -68,7 +68,7 @@ export function GalleryBoard({ slug }: { slug: string }) {
 
         {data && data.posts.length === 0 ? (
           <div className="rounded-2xl border border-line bg-surface px-4 py-12 text-center">
-            <p className="text-sm text-muted">아직 글이 없습니다. 첫 글을 남겨 보세요.</p>
+            <p className="text-sm text-muted">아직 글이 없습니다.</p>
           </div>
         ) : null}
 

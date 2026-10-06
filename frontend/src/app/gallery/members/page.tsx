@@ -40,7 +40,6 @@ export default function MembersPage() {
           마이너갤
         </Link>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">회원 역할</h1>
-        <p className="mt-1 text-sm text-muted">어드민만 역할을 바꿉니다. 모더레이터와 어드민은 갤러리를 직접 만들고, 사용자는 요청 후 승인을 받습니다.</p>
         {ready && session?.role !== "ADMIN" ? <p className="mt-4 text-sm text-muted">어드민 계정으로 로그인해야 합니다.</p> : null}
         {error ? (
           <p role="alert" className="mt-4 rounded-2xl border border-danger/30 bg-danger-container px-4 py-3 text-sm text-on-danger-container">

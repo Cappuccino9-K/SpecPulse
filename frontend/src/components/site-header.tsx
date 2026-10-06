@@ -27,7 +27,6 @@ export function SiteHeader() {
           </span>
           <span className="min-w-0">
             <span className="block text-base font-bold tracking-tight">SpecPulse</span>
-            <span className="hidden truncate text-xs text-muted sm:block">스펙은 나란히, 이야기는 갤러리에서</span>
           </span>
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">

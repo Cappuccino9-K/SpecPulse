@@ -27,10 +27,10 @@ const FALLBACK_PRESETS: Preset[] = [
   },
 ];
 
-const PROVIDERS: { id: Provider; label: string; hint: string }[] = [
-  { id: "local", label: "로컬", hint: "키 없이 스펙 표와 리뷰 문장을 구조화합니다." },
-  { id: "openai", label: "OpenAI", hint: "gpt-4o-mini. OPENAI_API_KEY가 필요합니다." },
-  { id: "ollama", label: "Ollama", hint: "로컬 모델 qwen2.5 또는 llama3.1. Ollama가 떠 있어야 합니다." },
+const PROVIDERS: { id: Provider; label: string }[] = [
+  { id: "local", label: "로컬" },
+  { id: "openai", label: "OpenAI" },
+  { id: "ollama", label: "Ollama" },
 ];
 
 type Props = {
@@ -59,7 +59,6 @@ export function UrlInputForm({
   onSubmit,
 }: Props) {
   const [presets, setPresets] = useState<Preset[]>(FALLBACK_PRESETS);
-  const activeHint = PROVIDERS.find((item) => item.id === provider)?.hint;
 
   useEffect(() => {
     fetchPresets()
@@ -80,9 +79,6 @@ export function UrlInputForm({
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-base font-semibold tracking-tight">비교할 제품 페이지</h2>
-          <p className="mt-1 text-sm text-muted">
-            종류와 상관없이 상세 주소 두 개면 됩니다. CPU, 메모리, SSD, 메인보드, 파워, 모니터, 노트북, 태블릿, 그래픽카드를 같은 칸에서 비교합니다.
-          </p>
         </div>
         <div className="mt-3 inline-flex rounded-full bg-surface-container p-1 sm:mt-0" role="radiogroup" aria-label="분석 엔진">
           {PROVIDERS.map((item) => (
@@ -102,7 +98,6 @@ export function UrlInputForm({
           ))}
         </div>
       </div>
-      <p className="mt-2 text-xs text-muted">{activeHint}</p>
 
       <div className="mt-5 grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <OutlinedField

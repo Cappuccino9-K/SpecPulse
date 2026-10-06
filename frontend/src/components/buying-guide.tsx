@@ -1,10 +1,7 @@
 import { Sparkles } from "lucide-react";
-import { engineLabel } from "@/lib/utils";
 import type { CompareResponse } from "@/types/analysis";
 
 export function BuyingGuide({ result }: { result: CompareResponse }) {
-  const engine = engineLabel(result.products[0]?.source ?? result.provider, result.products[0]?.extractor ?? "parser");
-  const cached = result.products.some((product) => product.cached);
   return (
     <section className="rise overflow-hidden rounded-2xl border border-line bg-surface elev-1">
       <div className="border-l-4 border-primary px-5 py-5 sm:px-6">
@@ -25,10 +22,6 @@ export function BuyingGuide({ result }: { result: CompareResponse }) {
           ))}
         </div>
         <p className="mt-4 text-xs leading-5 text-muted">{result.guide.caveat}</p>
-        <p className="mt-3 text-[11px] font-medium text-muted">
-          분석 엔진 · {engine}
-          {cached ? " · 같은 주소는 캐시를 사용했습니다" : ""}
-        </p>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { MessagesSquare, PenLine, Plus } from "lucide-react";
+import { MessagesSquare, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
@@ -27,9 +27,6 @@ export function GalleryHome() {
         <div className="mb-5 flex flex-col gap-1">
           <p className="text-xs font-semibold tracking-wide text-primary">MINOR GALLERY</p>
           <h1 className="text-2xl font-bold tracking-tight">마이너갤러리</h1>
-          <p className="max-w-2xl text-sm text-muted">
-            글과 댓글은 닉네임과 글 비밀번호만으로 남깁니다. 갤러리를 새로 여는 일만 구글 로그인과 역할이 필요합니다.
-          </p>
         </div>
         <div className="mb-5 flex flex-wrap gap-2">
           {session ? (
@@ -82,11 +79,6 @@ export function GalleryHome() {
             ))}
           </ul>
         ) : null}
-
-        <p className="mt-6 inline-flex items-center gap-2 text-xs text-muted">
-          <PenLine className="size-3.5" />
-          갤러리 서비스는 Spring Boot로 따로 떠 있고, 스펙 비교 API와 화면만 나눕니다.
-        </p>
       </main>
     </div>
   );

@@ -30,7 +30,7 @@ export function HistoryRail({
         </div>
         {items.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-outline px-4 py-6 text-sm leading-6 text-muted">
-            아직 저장된 비교가 없습니다. 분석을 끝내면 이 자리에 남습니다.
+            아직 없습니다.
           </p>
         ) : (
           <ul className="flex gap-3 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">

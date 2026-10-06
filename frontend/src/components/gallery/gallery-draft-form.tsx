@@ -54,7 +54,6 @@ export function GalleryDraftForm({ role }: { role: GalleryRole }) {
           placeholder="psu"
           className="h-12 w-full rounded-xl border border-outline bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/15"
         />
-        <span className="mt-1 block text-xs text-muted">영어 소문자, 숫자, 하이픈. 예: /gallery/psu</span>
       </label>
       <label className="block">
         <span className="mb-1.5 block text-xs font-medium text-muted">설명</span>
