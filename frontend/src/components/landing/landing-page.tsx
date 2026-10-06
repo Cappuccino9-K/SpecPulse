@@ -31,6 +31,10 @@ export function LandingPage() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
       video?.pause();
+      scope.querySelectorAll<HTMLElement>("[data-win]").forEach((cell) => {
+        cell.style.backgroundColor = "rgba(88, 224, 168, 0.16)";
+        cell.style.color = "#58e0a8";
+      });
       return;
     }
 
