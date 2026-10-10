@@ -28,13 +28,13 @@ function Get-ProtectedPids {
     [void]$protected.Add($parent)
     $current = $parent
   }
-  return ,$protected
+  Write-Output $protected -NoEnumerate
 }
 
 function Get-ListeningPids([int] $Port) {
-  $found = New-Object System.Collections.Generic.List[int]
+  $seen = @{}
   $netstat = Join-Path $env:SystemRoot "System32\netstat.exe"
-  if (-not (Test-Path $netstat)) { return ,@() }
+  if (-not (Test-Path $netstat)) { return }
   $previous = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
@@ -43,16 +43,18 @@ function Get-ListeningPids([int] $Port) {
     $ErrorActionPreference = $previous
   }
   foreach ($line in @($lines)) {
-    $parts = ($line.Trim() -split '\s+')
+    $parts = @($line.Trim() -split '\s+')
     if ($parts.Length -lt 5 -or $parts[0] -ne "TCP") { continue }
     if ($parts[1] -notmatch ":$Port$") { continue }
-    if ($parts[-1] -notmatch '^\d+$') { continue }
+    $procText = [string]$parts[-1]
+    if ($procText -notmatch '^\d+$') { continue }
     $state = ($parts[3..($parts.Length - 2)] -join " ")
     if ($state -notin @("LISTENING", "LISTEN", "수신 대기")) { continue }
-    $procId = [int]$parts[-1]
-    if ($procId -gt 4 -and -not $found.Contains($procId)) { [void]$found.Add($procId) }
+    $procId = [int]$procText
+    if ($procId -le 4 -or $seen.ContainsKey($procId)) { continue }
+    $seen[$procId] = $true
+    Write-Output $procId
   }
-  return ,$found.ToArray()
 }
 
 function Stop-Listener([int] $ProcId, [string] $Taskkill) {
@@ -78,11 +80,11 @@ function Stop-SpecPulsePorts {
     $busy = @()
     $targets = New-Object System.Collections.Generic.HashSet[int]
     foreach ($port in $ports) {
-      $owners = @(Get-ListeningPids $port)
+      $owners = @(Get-ListeningPids $port | ForEach-Object { [int]$_ })
       if ($owners.Count -eq 0) { continue }
       $busy += $port
       foreach ($procId in $owners) {
-        if (-not $protected.Contains([int]$procId)) { [void]$targets.Add([int]$procId) }
+        if (-not $protected.Contains($procId)) { [void]$targets.Add($procId) }
       }
     }
     if ($busy.Count -eq 0) { return }
@@ -97,7 +99,7 @@ function Stop-SpecPulsePorts {
   }
   $details = @()
   foreach ($port in $busy) {
-    foreach ($procId in @(Get-ListeningPids $port)) {
+    foreach ($procId in @(Get-ListeningPids $port | ForEach-Object { [int]$_ })) {
       $name = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
       if (-not $name) { $name = "pid" }
       $details += "$name($procId) $($port)"
