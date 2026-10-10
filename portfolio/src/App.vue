@@ -7,6 +7,7 @@ import { careerPoints, certificates, familiar, projects, recent, schools } from 
 gsap.registerPlugin(ScrollTrigger);
 
 const loop = [...familiar, ...recent, ...familiar, ...recent];
+const specpulseUrl = import.meta.env.VITE_SPECPULSE_URL || "http://127.0.0.1:43721";
 let context: gsap.Context | undefined;
 
 onMounted(() => {
@@ -234,6 +235,7 @@ onBeforeUnmount(() => {
             <ul>
               <li v-for="point in project.points" :key="point" data-reveal>{{ point }}</li>
             </ul>
+            <a v-if="project.id === 'specpulse'" class="open" :href="specpulseUrl">SpecPulse 열어보기</a>
           </div>
           <figure v-if="project.image" class="frame" data-reveal>
             <img data-shot :src="project.image" :alt="project.alt" />
