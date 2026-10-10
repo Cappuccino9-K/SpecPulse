@@ -19,7 +19,7 @@ Windows에서는 Docker를 쓰지 않습니다. [PostgreSQL Windows 설치본](h
 powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-처음 실행은 Python 가상환경, npm 패키지, 갤러리용 Maven 의존성을 받느라 몇 분 걸립니다. 마이너갤러리는 JDK 17 또는 21이 필요합니다. 없으면 [Temurin 21](https://adoptium.net) Windows x64를 설치한 뒤 다시 실행하세요. 끝나면 브라우저는 http://127.0.0.1:43721 입니다. 상단에서 스펙 비교와 마이너갤을 오갑니다. 창을 닫거나 Ctrl+C 로 프론트, 스펙 API, 갤러리를 같이 멈춥니다.
+처음 실행은 Python 가상환경, npm 패키지, 갤러리용 Maven 의존성을 받느라 몇 분 걸립니다. 마이너갤러리는 JDK 17 또는 21이 필요합니다. 없으면 [Temurin 21](https://adoptium.net) Windows x64를 설치한 뒤 다시 실행하세요. 끝나면 SpecPulse는 http://127.0.0.1:43721 , 포트폴리오는 http://127.0.0.1:43831 입니다. 상단에서 스펙 비교와 마이너갤을 오갑니다. 창을 닫거나 Ctrl+C 로 포트폴리오, 프론트, 스펙 API, 갤러리를 같이 멈춥니다.
 
 직접 나누어 실행할 때는 로컬 PostgreSQL이 `127.0.0.1:5432`에서 떠 있어야 합니다. 접속 주소는 `backend/.env.example`의 `DATABASE_URL`입니다.
 
@@ -62,6 +62,7 @@ export GALLERY_DB_PASSWORD='설치할 때 정한 비밀번호'
 
 | 프로세스 | 포트 | 역할 |
 | --- | --- | --- |
+| Vue 포트폴리오 | 43831 | 개인 포트폴리오. SpecPulse로 바로 이동합니다. |
 | Next.js | 43721 | 스펙 비교 화면, 마이너갤 화면 |
 | FastAPI | 18765 | URL 스펙 추출과 비교 |
 | Spring Boot | 18766 | 갤러리, 글, 댓글, 추천 |
@@ -80,7 +81,7 @@ export GALLERY_DB_PASSWORD='설치할 때 정한 비밀번호'
 
 ## 개인 포트폴리오
 
-권영준 포트폴리오는 SpecPulse와 다른 Vue 앱입니다. GSAP으로 스크롤 애니메이션을 넣었습니다.
+권영준 포트폴리오는 SpecPulse와 다른 Vue 앱입니다. GSAP으로 스크롤 애니메이션을 넣었고, `start.bat`이 SpecPulse와 함께 43831 포트로 켭니다.
 
 ```bash
 cd portfolio

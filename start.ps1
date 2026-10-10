@@ -37,7 +37,7 @@ function Get-ListeningPids([int] $Port) {
 }
 
 function Stop-SpecPulsePorts {
-  $ports = @(18765, 18766, 43721)
+  $ports = @(18765, 18766, 43721, 43831)
   $taskkill = Join-Path $env:SystemRoot "System32\taskkill.exe"
   $targets = New-Object System.Collections.Generic.HashSet[int]
   foreach ($port in $ports) {
@@ -64,7 +64,7 @@ function Stop-SpecPulsePorts {
     if ($busy.Count -eq 0) { return }
     Start-Sleep -Milliseconds 500
   }
-  throw "18765, 18766, 43721 포트를 비우지 못했습니다. 그 포트를 쓰는 프로그램을 종료한 뒤 start.bat을 다시 실행하세요."
+  throw "18765, 18766, 43721, 43831 포트를 비우지 못했습니다. 그 포트를 쓰는 프로그램을 종료한 뒤 start.bat을 다시 실행하세요."
 }
 
 function Find-Java {
@@ -332,6 +332,12 @@ Push-Location (Join-Path $Root "frontend")
 if ($LASTEXITCODE -ne 0) { throw "npm install에 실패했습니다." }
 Pop-Location
 
+Write-Host "포트폴리오 패키지를 확인합니다."
+Push-Location (Join-Path $Root "portfolio")
+& $npm install
+if ($LASTEXITCODE -ne 0) { throw "포트폴리오 npm install에 실패했습니다." }
+Pop-Location
+
 Stop-SpecPulsePorts
 
 $nextCache = Join-Path $Root "frontend\.next"
@@ -351,6 +357,10 @@ if (Get-Command node.exe -ErrorAction SilentlyContinue) {
 $nextBin = Join-Path $Root "frontend\node_modules\next\dist\bin\next"
 if (-not (Test-Path $nextBin)) {
   throw "프론트엔드 실행 파일을 찾지 못했습니다. frontend 폴더에서 npm install을 확인해 주세요."
+}
+$viteBin = Join-Path $Root "portfolio\node_modules\vite\bin\vite.js"
+if (-not (Test-Path $viteBin)) {
+  throw "포트폴리오 실행 파일을 찾지 못했습니다. portfolio 폴더에서 npm install을 확인해 주세요."
 }
 
 $javaExe = Find-Java
@@ -372,6 +382,7 @@ $env:API_PROXY_TARGET = "http://127.0.0.1:18765"
 $env:GALLERY_PROXY_TARGET = "http://127.0.0.1:18766"
 $env:GALLERY_PUBLIC_URL = "http://127.0.0.1:18766"
 $env:GALLERY_FRONTEND_URL = "http://127.0.0.1:43721"
+$env:VITE_SPECPULSE_URL = "http://127.0.0.1:43721"
 $jwtFile = Join-Path $Root "gallery-service\.jwt-secret"
 if (-not (Test-Path $jwtFile)) {
   $bytes = New-Object byte[] 32
@@ -399,13 +410,15 @@ if (Test-Path $oauthFile) {
 } else {
   Write-Host "구글 로그인을 쓰려면 클라이언트 JSON을 gallery-service\google-oauth.json 으로 저장하세요. 이 파일은 git에 올라가지 않습니다."
 }
-Write-Host "PostgreSQL 127.0.0.1:5432  스펙 API http://127.0.0.1:18765  마이너갤 http://127.0.0.1:18766  화면 http://127.0.0.1:43721"
+Write-Host "PostgreSQL 127.0.0.1:5432  스펙 API http://127.0.0.1:18765  마이너갤 http://127.0.0.1:18766"
+Write-Host "SpecPulse http://127.0.0.1:43721  포트폴리오 http://127.0.0.1:43831"
 Write-Host "갤러리(Spring Boot)는 처음 실행 때 Maven 의존성을 받느라 1~2분 걸릴 수 있습니다."
 Write-Host "끝내려면 이 창에서 Ctrl+C 를 누르세요."
 
 $backend = Start-Process -FilePath $venvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "18765") -WorkingDirectory (Join-Path $Root "backend") -NoNewWindow -PassThru
 $gallery = Start-Process -FilePath $env:ComSpec -ArgumentList @("/c", "mvnw.cmd", "-q", "spring-boot:run") -WorkingDirectory (Join-Path $Root "gallery-service") -NoNewWindow -PassThru
 $frontend = Start-Process -FilePath $node -ArgumentList @($nextBin, "dev", "-H", "0.0.0.0", "-p", "43721") -WorkingDirectory (Join-Path $Root "frontend") -NoNewWindow -PassThru
+$portfolio = Start-Process -FilePath $node -ArgumentList @($viteBin, "--host", "0.0.0.0", "--port", "43831") -WorkingDirectory (Join-Path $Root "portfolio") -NoNewWindow -PassThru
 
 function Test-Running([System.Diagnostics.Process] $Process) {
   if (-not $Process) { return $false }
@@ -415,7 +428,7 @@ function Test-Running([System.Diagnostics.Process] $Process) {
 }
 
 try {
-  while ((Test-Running $backend) -and (Test-Running $frontend) -and (Test-Running $gallery)) {
+  while ((Test-Running $backend) -and (Test-Running $frontend) -and (Test-Running $gallery) -and (Test-Running $portfolio)) {
     Start-Sleep -Seconds 1
   }
   if (-not (Test-Running $backend)) {
@@ -427,8 +440,12 @@ try {
   if (-not (Test-Running $frontend)) {
     Write-Host "화면 프로세스가 종료되었습니다. 코드 $($frontend.ExitCode)"
   }
+  if (-not (Test-Running $portfolio)) {
+    Write-Host "포트폴리오 프로세스가 종료되었습니다. 코드 $($portfolio.ExitCode)"
+  }
 } finally {
   Stop-Tree $backend
   Stop-Tree $gallery
   Stop-Tree $frontend
+  Stop-Tree $portfolio
 }
