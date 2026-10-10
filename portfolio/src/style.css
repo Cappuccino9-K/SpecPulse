@@ -494,6 +494,35 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .case.reverse .copy { order: 2; }
 }
 
+@media (min-width: 1200px) {
+  .wrap { width: min(1280px, calc(100% - 72px)); }
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.72fr);
+    align-items: start;
+    gap: 48px 64px;
+    padding-top: 48px;
+  }
+  .hero-foot { grid-template-columns: 1fr; }
+  .facts { grid-template-columns: 1fr; gap: 0; }
+  .facts li { padding: 18px 0 16px; }
+  .stack-head {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.62fr) minmax(0, 1.38fr);
+    align-items: end;
+    gap: 24px 40px;
+  }
+  .stack-head .chips {
+    margin-top: 0;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1800px) {
+  .wrap { width: min(1560px, calc(100% - 96px)); }
+}
+
 @media (max-width: 720px) {
   .facts { grid-template-columns: 1fr; }
   .certs li { grid-template-columns: 1fr; gap: 2px; }

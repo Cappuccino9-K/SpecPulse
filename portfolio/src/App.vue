@@ -138,19 +138,19 @@ onBeforeUnmount(() => {
     </section>
 
     <section id="stack" class="section">
-      <div class="wrap">
-        <p class="kicker" data-reveal>Stack</p>
-        <h2 data-reveal>오래 써 온 도구</h2>
+      <div class="wrap stack-head">
+        <div>
+          <p class="kicker" data-reveal>Stack</p>
+          <h2 data-reveal>오래 써 온 도구</h2>
+        </div>
+        <ul class="chips">
+          <li v-for="name in familiar" :key="name" data-reveal>{{ name }}</li>
+        </ul>
       </div>
       <div class="marquee" aria-hidden="true">
         <div class="track">
           <span v-for="(name, index) in loop" :key="`${name}-${index}`">{{ name }}</span>
         </div>
-      </div>
-      <div class="wrap">
-        <ul class="chips">
-          <li v-for="name in familiar" :key="name" data-reveal>{{ name }}</li>
-        </ul>
       </div>
     </section>
 
