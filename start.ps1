@@ -16,10 +16,25 @@ function Stop-Tree([System.Diagnostics.Process] $Process) {
   }
 }
 
+function Get-ProtectedPids {
+  $protected = New-Object System.Collections.Generic.HashSet[int]
+  [void]$protected.Add($PID)
+  $current = $PID
+  for ($i = 0; $i -lt 6; $i++) {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue
+    if (-not $proc) { break }
+    $parent = [int]$proc.ParentProcessId
+    if ($parent -le 4 -or $protected.Contains($parent)) { break }
+    [void]$protected.Add($parent)
+    $current = $parent
+  }
+  return ,$protected
+}
+
 function Get-ListeningPids([int] $Port) {
   $found = New-Object System.Collections.Generic.List[int]
   $netstat = Join-Path $env:SystemRoot "System32\netstat.exe"
-  if (-not (Test-Path $netstat)) { return $found }
+  if (-not (Test-Path $netstat)) { return ,@() }
   $previous = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
@@ -27,44 +42,69 @@ function Get-ListeningPids([int] $Port) {
   } finally {
     $ErrorActionPreference = $previous
   }
-  foreach ($line in $lines) {
-    if ($line -match ":$Port\s+\S+\s+\S+\s+(\d+)\s*$") {
-      $procId = [int]$Matches[1]
-      if ($procId -gt 4) { $found.Add($procId) }
-    }
+  foreach ($line in @($lines)) {
+    $parts = ($line.Trim() -split '\s+')
+    if ($parts.Length -lt 5 -or $parts[0] -ne "TCP") { continue }
+    if ($parts[1] -notmatch ":$Port$") { continue }
+    if ($parts[-1] -notmatch '^\d+$') { continue }
+    $state = ($parts[3..($parts.Length - 2)] -join " ")
+    if ($state -notin @("LISTENING", "LISTEN", "수신 대기")) { continue }
+    $procId = [int]$parts[-1]
+    if ($procId -gt 4 -and -not $found.Contains($procId)) { [void]$found.Add($procId) }
   }
-  return $found
+  return ,$found.ToArray()
+}
+
+function Stop-Listener([int] $ProcId, [string] $Taskkill) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    if (Test-Path $Taskkill) {
+      & $Taskkill /PID $ProcId /T /F 2>$null | Out-Null
+    }
+    Stop-Process -Id $ProcId -Force -ErrorAction SilentlyContinue
+  } finally {
+    $ErrorActionPreference = $previous
+  }
 }
 
 function Stop-SpecPulsePorts {
   $ports = @(18765, 18766, 43721, 43831)
+  $protected = Get-ProtectedPids
   $taskkill = Join-Path $env:SystemRoot "System32\taskkill.exe"
-  $targets = New-Object System.Collections.Generic.HashSet[int]
-  foreach ($port in $ports) {
-    foreach ($procId in (Get-ListeningPids $port)) {
-      [void]$targets.Add($procId)
-    }
-  }
-  if ($targets.Count -eq 0) { return }
-  Write-Host "이전에 켜 둔 SpecPulse가 포트를 사용 중이라 종료합니다."
-  $previous = $ErrorActionPreference
-  $ErrorActionPreference = "Continue"
-  try {
-    foreach ($procId in $targets) {
-      & $taskkill /PID $procId /T /F 2>$null | Out-Null
-    }
-  } finally {
-    $ErrorActionPreference = $previous
-  }
+  $announced = $false
+  $busy = @()
   for ($attempt = 0; $attempt -lt 20; $attempt++) {
     $busy = @()
+    $targets = New-Object System.Collections.Generic.HashSet[int]
     foreach ($port in $ports) {
-      if ((Get-ListeningPids $port).Count -gt 0) { $busy += $port }
+      $owners = @(Get-ListeningPids $port)
+      if ($owners.Count -eq 0) { continue }
+      $busy += $port
+      foreach ($procId in $owners) {
+        if (-not $protected.Contains([int]$procId)) { [void]$targets.Add([int]$procId) }
+      }
     }
     if ($busy.Count -eq 0) { return }
+    if (-not $announced) {
+      Write-Host "이전에 켜 둔 SpecPulse가 포트를 사용 중이라 종료합니다."
+      $announced = $true
+    }
+    foreach ($procId in $targets) {
+      Stop-Listener $procId $taskkill
+    }
     Start-Sleep -Milliseconds 500
   }
-  throw "18765, 18766, 43721, 43831 포트를 비우지 못했습니다. 그 포트를 쓰는 프로그램을 종료한 뒤 start.bat을 다시 실행하세요."
+  $details = @()
+  foreach ($port in $busy) {
+    foreach ($procId in @(Get-ListeningPids $port)) {
+      $name = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
+      if (-not $name) { $name = "pid" }
+      $details += "$name($procId) $($port)"
+    }
+  }
+  $who = if ($details.Count -gt 0) { $details -join ", " } else { ($busy -join ", ") }
+  throw "$($busy -join ', ') 포트를 비우지 못했습니다. 아직 사용 중: $who"
 }
 
 function Find-Java {
