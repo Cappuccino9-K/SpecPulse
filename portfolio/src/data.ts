@@ -12,17 +12,6 @@ export const familiar = [
   "AWS",
 ]
 
-export const recent = [
-  "TypeScript",
-  "Next.js",
-  "Spring Boot",
-  "FastAPI",
-  "PostgreSQL",
-  "Python",
-  "Tailwind",
-  "GSAP",
-]
-
 export const certificates = [
   { name: "정보처리산업기사", org: "한국산업인력공단", date: "2021.06.20" },
   { name: "컴퓨터활용능력 2급", org: "대한상공회의소", date: "2016.08.19" },
@@ -68,7 +57,21 @@ export const careerPoints = [
   },
 ]
 
-export const projects = [
+type Project = {
+  id: string
+  index: string
+  mark: string
+  range: string
+  kind: string
+  title: string
+  stack: string
+  image: string
+  alt: string
+  tools: string[]
+  points: string[]
+}
+
+export const projects: Project[] = [
   {
     id: "specpulse",
     index: "01",
@@ -79,6 +82,7 @@ export const projects = [
     stack: "Next.js / FastAPI / Spring Boot",
     image: "",
     alt: "SpecPulse 비교 화면. 그래픽카드 두 장의 스펙과 이긴 항목, 구매 가이드가 한 화면에 있습니다.",
+    tools: ["TypeScript", "Next.js", "Spring Boot", "FastAPI", "PostgreSQL", "Python", "Tailwind", "GSAP"],
     points: [
       "상품 페이지 주소 두 개로 CPU, 그래픽카드, 노트북 스펙을 한 표에 나란히 둡니다.",
       "이긴 항목과 구매 가이드를 만들고, 그 비교를 마이너갤 글로 남깁니다.",
@@ -96,6 +100,7 @@ export const projects = [
     stack: "ASP.NET / MSSQL",
     image: "/work/benedu.jpg",
     alt: "BENEDU 학습목록 화면. 시험과목과 학습종류를 거르고 과목 목록을 보여 줍니다.",
+    tools: [],
     points: [
       "부트스트랩 그리드로 PC, 태블릿, 모바일 3단과 다크 모드를 맞췄습니다.",
       "학생 300명이 동시에 시험을 내고 볼 때 나던 교착상태를 Lock으로 없앴습니다.",
@@ -114,6 +119,7 @@ export const projects = [
     stack: "React / MyBatis",
     image: "/work/bikestory.jpg",
     alt: "BikeStory 첫 화면. 여행 글, 날씨, 동행 모집이 한 페이지에 있습니다.",
+    tools: [],
     points: [
       "컴포넌트로 반응형 화면과 프론트 구조를 나눴습니다.",
       "MyBatis로 SQL과 비즈니스 로직을 나누고 게시판 CRUD를 만들었습니다.",

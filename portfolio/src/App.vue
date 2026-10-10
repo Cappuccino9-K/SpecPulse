@@ -2,11 +2,11 @@
 import { onBeforeUnmount, onMounted } from "vue";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { careerPoints, certificates, familiar, projects, recent, schools } from "./data";
+import { careerPoints, certificates, familiar, projects, schools } from "./data";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const loop = [...familiar, ...recent, ...familiar, ...recent];
+const loop = [...familiar, ...familiar];
 const specpulseUrl = import.meta.env.VITE_SPECPULSE_URL || "http://127.0.0.1:43721";
 let context: gsap.Context | undefined;
 
@@ -140,30 +140,17 @@ onBeforeUnmount(() => {
     <section id="stack" class="section">
       <div class="wrap">
         <p class="kicker" data-reveal>Stack</p>
-        <h2 data-reveal>오래 쓴 것과, 최근에 더한 것</h2>
+        <h2 data-reveal>오래 써 온 도구</h2>
       </div>
       <div class="marquee" aria-hidden="true">
         <div class="track">
           <span v-for="(name, index) in loop" :key="`${name}-${index}`">{{ name }}</span>
         </div>
       </div>
-      <div class="wrap groups">
-        <div>
-          <h3 data-reveal>손에 익은 도구</h3>
-          <ul class="chips">
-            <li v-for="name in familiar" :key="name" data-reveal>{{ name }}</li>
-          </ul>
-        </div>
-        <div>
-          <h3 data-reveal>스펙 비교 서비스를 나누어 만들며 더한 도구</h3>
-          <ul class="chips">
-            <li v-for="name in recent" :key="name" data-reveal>{{ name }}</li>
-          </ul>
-          <p class="note" data-reveal>
-            FastAPI와 Spring Boot를 나누고, 화면은 Next.js로 이었습니다. 비교 결과는 PostgreSQL에 두고
-            첫 화면은 GSAP으로 스크롤에 붙였습니다.
-          </p>
-        </div>
+      <div class="wrap">
+        <ul class="chips">
+          <li v-for="name in familiar" :key="name" data-reveal>{{ name }}</li>
+        </ul>
       </div>
     </section>
 
@@ -234,6 +221,9 @@ onBeforeUnmount(() => {
             </header>
             <ul>
               <li v-for="point in project.points" :key="point" data-reveal>{{ point }}</li>
+            </ul>
+            <ul v-if="project.tools.length" class="chips project-tools">
+              <li v-for="name in project.tools" :key="name" data-reveal>{{ name }}</li>
             </ul>
             <a v-if="project.id === 'specpulse'" class="open" :href="specpulseUrl">SpecPulse 열어보기</a>
           </div>
