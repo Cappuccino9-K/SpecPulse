@@ -6,7 +6,8 @@ import { careerPoints, certificates, familiar, projects, schools } from "./data"
 
 gsap.registerPlugin(ScrollTrigger);
 
-const loop = [...familiar, ...familiar];
+const reel = [...familiar, ...familiar];
+const loop = [...reel, ...reel];
 const specpulseUrl = import.meta.env.VITE_SPECPULSE_URL || "http://127.0.0.1:43721";
 let context: gsap.Context | undefined;
 
@@ -148,8 +149,10 @@ onBeforeUnmount(() => {
         </ul>
       </div>
       <div class="marquee" aria-hidden="true">
-        <div class="track">
-          <span v-for="(name, index) in loop" :key="`${name}-${index}`">{{ name }}</span>
+        <div class="marquee-clip">
+          <div class="track">
+            <span v-for="(name, index) in loop" :key="`${name}-${index}`">{{ name }}</span>
+          </div>
         </div>
       </div>
     </section>
