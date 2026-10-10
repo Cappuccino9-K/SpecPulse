@@ -70,8 +70,25 @@ export const careerPoints = [
 
 export const projects = [
   {
-    id: "benedu",
+    id: "specpulse",
     index: "01",
+    mark: "SPECPULSE",
+    range: "2026",
+    kind: "개인 프로젝트",
+    title: "두 주소로 스펙을 나란히",
+    stack: "Next.js / FastAPI / Spring Boot",
+    image: "",
+    alt: "SpecPulse 비교 화면. 그래픽카드 두 장의 스펙과 이긴 항목, 구매 가이드가 한 화면에 있습니다.",
+    points: [
+      "상품 페이지 주소 두 개로 CPU, 그래픽카드, 노트북 스펙을 한 표에 나란히 둡니다.",
+      "이긴 항목과 구매 가이드를 만들고, 그 비교를 마이너갤 글로 남깁니다.",
+      "스펙 API는 FastAPI, 갤러리는 Spring Boot, 화면은 Next.js로 나누고 PostgreSQL을 같이 씁니다.",
+      "첫 화면은 짧은 영상과 GSAP 스크롤로, 비교가 갤러리 글이 되는 흐름을 보여 줍니다.",
+    ],
+  },
+  {
+    id: "benedu",
+    index: "02",
     mark: "BENEDU",
     range: "2024.12.20 — 2025.07.01",
     kind: "팀 프로젝트 · 3명",
@@ -89,7 +106,7 @@ export const projects = [
   },
   {
     id: "bikestory",
-    index: "02",
+    index: "03",
     mark: "BIKESTORY",
     range: "2023.11.12 — 2024.02.15",
     kind: "개인 프로젝트",

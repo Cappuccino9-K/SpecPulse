@@ -235,8 +235,32 @@ onBeforeUnmount(() => {
               <li v-for="point in project.points" :key="point" data-reveal>{{ point }}</li>
             </ul>
           </div>
-          <figure class="frame" data-reveal>
+          <figure v-if="project.image" class="frame" data-reveal>
             <img data-shot :src="project.image" :alt="project.alt" />
+          </figure>
+          <figure v-else class="frame still" data-reveal :aria-label="project.alt">
+            <div class="pulse">
+              <div class="pulse-bar">
+                <strong>SpecPulse</strong>
+                <span>스펙 비교</span>
+              </div>
+              <div class="pulse-stage">
+                <article>
+                  <p>NVIDIA · 그래픽카드</p>
+                  <h4>RTX 4070 SUPER</h4>
+                  <p class="price">899,000원</p>
+                  <em>220W</em>
+                </article>
+                <p class="vs">VS</p>
+                <article>
+                  <p>AMD · 그래픽카드</p>
+                  <h4>RX 7800 XT</h4>
+                  <p class="price">689,000원</p>
+                  <em>16GB</em>
+                </article>
+              </div>
+              <p class="pulse-guide">1440p 게임이라면 4070 SUPER <span>비교</span></p>
+            </div>
           </figure>
         </article>
       </div>
