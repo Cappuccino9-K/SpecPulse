@@ -78,6 +78,18 @@ export GALLERY_DB_PASSWORD='설치할 때 정한 비밀번호'
 
 화면 시안은 Figma 파일 [SpecPulse](https://www.figma.com/design/mu5BBjBv8DyF3f7MseVMu3)에 있습니다.
 
+## 개인 포트폴리오
+
+권영준 포트폴리오는 SpecPulse와 다른 Vue 앱입니다. GSAP으로 스크롤 애니메이션을 넣었습니다.
+
+```bash
+cd portfolio
+npm install
+npm run dev
+```
+
+브라우저에서 [http://127.0.0.1:43831](http://127.0.0.1:43831) 을 엽니다.
+
 ## 분석 엔진
 
 `.env`의 `LLM_PROVIDER` 또는 화면의 로컬 / OpenAI / Ollama 전환으로 고릅니다.
